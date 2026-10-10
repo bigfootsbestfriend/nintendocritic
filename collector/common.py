@@ -20,7 +20,7 @@ REVIEWS_TABLE = "tblGYKZJDlxJCvXfW"
 IGDB_SWITCH2 = 508
 
 
-def load_env():
+def load_env(required=("IGDB_CLIENT_ID", "IGDB_CLIENT_SECRET", "AIRTABLE_TOKEN")):
     """Read ../.env for local runs; in GitHub Actions the secrets are already in the environment."""
     env_file = Path(__file__).resolve().parent.parent / ".env"
     if env_file.exists():
@@ -28,7 +28,7 @@ def load_env():
             if "=" in line and not line.lstrip().startswith("#"):
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip())
-    missing = [k for k in ("IGDB_CLIENT_ID", "IGDB_CLIENT_SECRET", "AIRTABLE_TOKEN") if not os.environ.get(k)]
+    missing = [k for k in required if not os.environ.get(k)]
     if missing:
         raise SystemExit("Missing secrets: " + ", ".join(missing))
 
