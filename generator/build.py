@@ -25,7 +25,7 @@ LAUNCHED = False
 SITE = "https://nintendocritic.com"
 AMAZON_TAG = "magpie014-20"  # site.js swaps in the amazon.ca tag for Canadian visitors
 # Newsletter Worker (~/Work/newsletter). Signup boxes stay hidden until this is set.
-NEWSLETTER_API = ""  # e.g. "https://newsletter.<account>.workers.dev"
+NEWSLETTER_API = "https://newsletter.crossplayguide.workers.dev"
 
 NAV = [
     ("/game-key-cards/", "Game-key cards"),
