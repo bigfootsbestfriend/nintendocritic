@@ -16,6 +16,10 @@ from common import (CHANGELOG_TABLE, GAMES_TABLE, IGDB_SWITCH2, IGDB, Airtable, 
 KEEP_TYPES = {0, 8, 9, 10, 11}
 
 
+def vague_note(human):
+    return f"{human} (IGDB, no exact date)"
+
+
 def fetch_releases(igdb, start, end):
     games = {}
     offset = 0
@@ -70,7 +74,7 @@ def main():
             creates.append({
                 "Name": g["name"], "Status": "Draft", "Publisher": g["publisher"], "Release date": g["date"],
                 "Release date note": ("From IGDB (community-edited), unconfirmed" if g["date"]
-                                      else f"{g['human']} (IGDB, no exact date)"), "Game type": "Switch 2 game",
+                                      else vague_note(g["human"])), "Game type": "Switch 2 game",
                 "Cartridge": "Not announced", "IGDB ID": g["id"],
                 "Sources": f"https://www.igdb.com/games/{g['id']} (release date, publisher)",
             })
@@ -86,8 +90,8 @@ def main():
         old = f.get("Release date")
         if not g["date"]:
             # Vague IGDB date: never overwrite a real date, just note the window.
-            if not old and f.get("Release date note") != g["human"]:
-                change["Release date note"] = g["human"]
+            if not old and f.get("Release date note") != vague_note(g["human"]):
+                change["Release date note"] = vague_note(g["human"])
         elif old != g["date"]:
             change["Release date"] = g["date"]
             change["Release date note"] = "From IGDB (community-edited), unconfirmed"
