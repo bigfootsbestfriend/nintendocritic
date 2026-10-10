@@ -1,0 +1,550 @@
+<title>Nintendo Critic Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: cartridge-label spec sheets. Palette comes from the logo: grape cartridge, marigold label, ink check. */
+:root {
+  --bg: #f4f2fb;
+  --surface: #ffffff;
+  --ink: #1d1433;
+  --muted: #645a7d;
+  --line: #ddd6ee;
+  --accent: #4a23b5;      /* grape: the cartridge */
+  --accent-ink: #ffffff;
+  --gold: #ffb627;        /* marigold: the label */
+  --gold-ink: #1d1433;
+  --check: #1d1433;       /* the check mark, same in both themes */
+  --full: #0f7a5f;   --full-bg: #d9f2ea;
+  --gkc: #b5431f;    --gkc-bg: #fde3d9;
+  --code: #645a7d;   --code-bg: #ebe7f4;
+  --bad: #b3261e;    --bad-bg: #fbe1df;
+  --warn: #7a5a00;   --warn-bg: #fff1c7;
+  --display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #130d22; --surface: #1c1530; --ink: #eee9fa; --muted: #a79cc4; --line: #2f2647;
+    --accent: #9d7dff; --accent-ink: #130d22; --gold: #ffc14d;
+    --full: #5fd4b1; --full-bg: #123329; --gkc: #ff9a76; --gkc-bg: #3a1f17; --code: #b9b0d4; --code-bg: #2a2240;
+    --bad: #ff8a80; --bad-bg: #3d1a1a; --warn: #ffd166; --warn-bg: #3a3010;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #130d22; --surface: #1c1530; --ink: #eee9fa; --muted: #a79cc4; --line: #2f2647;
+  --accent: #9d7dff; --accent-ink: #130d22; --gold: #ffc14d;
+  --full: #5fd4b1; --full-bg: #123329; --gkc: #ff9a76; --gkc-bg: #3a1f17; --code: #b9b0d4; --code-bg: #2a2240;
+    --bad: #ff8a80; --bad-bg: #3d1a1a; --warn: #ffd166; --warn-bg: #3a3010;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.mock-banner { background: var(--gold); color: var(--gold-ink); font-family: var(--mono); font-size: 12px; padding: 8px 16px; text-align: center; letter-spacing: .02em; }
+
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; }
+header.site { border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+header.site .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding-block: 12px; }
+.logo { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; }
+.logo svg { height: 40px; width: auto; flex: none; }
+.logo .wm { display: flex; flex-direction: column; line-height: .9; }
+.logo small { font: 600 9px var(--mono); letter-spacing: .32em; color: var(--accent); margin-left: 1px; }
+.logo b { font: 800 27px/.95 var(--display); letter-spacing: -.02em; color: var(--ink); }
+nav.main { display: flex; flex-wrap: wrap; gap: 4px; }
+nav.main button { font: 600 14px var(--body); background: none; border: 0; color: var(--muted); padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+nav.main button[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
+nav.main button:hover:not([aria-current="page"]) { color: var(--ink); background: var(--bg); }
+
+main { padding-block: 32px 48px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 800; letter-spacing: -.02em; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; margin: 6px 0 12px; text-wrap: balance; }
+h2 { font-size: 20px; margin: 0 0 12px; text-wrap: balance; }
+.lede { font-size: 18px; color: var(--muted); max-width: 62ch; margin: 0; }
+
+/* Status pills */
+.pill { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--mono); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.full { color: var(--full); background: var(--full-bg); }
+.pill.gkc { color: var(--gkc); background: var(--gkc-bg); }
+.pill.code { color: var(--code); background: var(--code-bg); }
+
+/* Game page */
+.game-head { display: grid; grid-template-columns: 180px 1fr; gap: 28px; align-items: start; }
+.cart { aspect-ratio: 48/56; max-width: 100%; background: var(--accent); clip-path: polygon(0 0, 74% 0, 100% 21%, 100% 100%, 0 100%); border-radius: 10px; position: relative; padding: 13% 17% 0 13%; color: var(--gold-ink); }
+.cart .label { background: var(--gold); border-radius: 8px; aspect-ratio: 27/25; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
+.cart small { font: 600 9px var(--mono); letter-spacing: .14em; }
+.cart b { font: 800 15px/1.05 var(--display); letter-spacing: -.01em; }
+.cart .pins { position: absolute; left: 20%; right: 20%; bottom: 7%; height: 12%; background: repeating-linear-gradient(90deg, var(--bg) 0 9%, transparent 9% 20%); opacity: .6; }
+.verdict { margin-top: 28px; display: grid; grid-template-columns: auto 1fr; gap: 0; border: 2px solid var(--gold); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.verdict .tag { background: var(--gold); color: var(--gold-ink); font: 800 16px var(--display); padding: 16px 18px; display: flex; align-items: center; letter-spacing: .03em; }
+.verdict p { margin: 0; padding: 14px 18px; font-size: 17px; min-width: 0; }
+
+.facts { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.fact .k { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.fact .v { font-size: 18px; font-weight: 700; }
+.fact .n { font-size: 14px; color: var(--muted); margin: 0; }
+
+.modes { margin-top: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.modes table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.modes th, .modes td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.modes th { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.modes td.num { font-family: var(--mono); }
+
+.buy { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.btn { display: inline-block; font: 700 16px var(--body); background: var(--accent); color: var(--accent-ink); text-decoration: none; padding: 12px 20px; border-radius: 8px; }
+.btn:hover { filter: brightness(1.08); }
+.aff-note { font-size: 13px; color: var(--muted); max-width: 46ch; }
+
+.sources { margin-top: 28px; font-size: 14px; color: var(--muted); }
+.sources ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* Hub page */
+.explainer { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.explainer div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.explainer p { margin: 0; font-size: 15px; }
+
+.controls { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls input { font: 16px var(--body); padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); flex: 1 1 220px; min-width: 0; }
+.chip { font: 600 14px var(--body); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.table-wrap { margin-top: 16px; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.list { width: 100%; border-collapse: collapse; min-width: 560px; }
+.list th, .list td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.list th { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.list tr:last-child td { border-bottom: 0; }
+.list td.game { font-weight: 700; }
+.list td.pub { color: var(--muted); font-size: 14px; }
+.list a.amz { font-size: 14px; white-space: nowrap; }
+.count { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 10px; }
+.empty { padding: 24px; color: var(--muted); }
+
+footer { border-top: 1px solid var(--line); padding-block: 24px 40px; font-size: 13px; color: var(--muted); }
+footer p { margin: 4px 0; max-width: 80ch; }
+
+
+.pill.bad { color: var(--bad); background: var(--bad-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.sample { display: inline-block; font: 600 10px var(--mono); letter-spacing: .08em; color: var(--muted); border: 1px dashed var(--muted); border-radius: 4px; padding: 1px 6px; vertical-align: middle; margin-left: 6px; }
+.panel { margin-top: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.panel h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.panel .sub { margin: -6px 0 14px; font-size: 14px; color: var(--muted); }
+.panel table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.panel th, .panel td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.panel tr:last-child td { border-bottom: 0; }
+.panel th { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.panel .scroll { overflow-x: auto; }
+.panel .scroll table { min-width: 560px; }
+td.num { font-family: var(--mono); }
+
+.played { margin-top: 28px; border-left: 4px solid var(--gold); background: var(--surface); border-radius: 0 10px 10px 0; padding: 18px 20px; }
+.played .who { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.played p { margin: 8px 0 0; font-size: 17px; max-width: 65ch; }
+.played p.placeholder { color: var(--muted); font-style: italic; }
+
+.calc { display: grid; gap: 14px; }
+.toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 3px; justify-self: start; flex-wrap: wrap; }
+.toggle button { font: 600 14px var(--body); border: 0; background: none; color: var(--ink); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.calc-out { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.path { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; }
+.path.best { border: 2px solid var(--full); }
+.path .price { font: 700 22px var(--mono); }
+.path .what { font-size: 14px; color: var(--muted); }
+.path .flag { font: 600 11px var(--mono); color: var(--full); letter-spacing: .06em; text-transform: uppercase; }
+
+.signup { margin-top: 32px; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 22px; display: grid; gap: 12px; }
+.signup h2 { margin: 0; font: 800 22px var(--display); letter-spacing: -.01em; }
+.signup p { margin: 0; max-width: 60ch; }
+.signup form { display: flex; flex-wrap: wrap; gap: 8px; }
+.signup input { flex: 1 1 220px; min-width: 0; font: 16px var(--body); padding: 11px 12px; border-radius: 8px; border: 0; background: var(--surface); color: var(--ink); }
+.signup button { font: 700 16px var(--body); padding: 11px 18px; border-radius: 8px; border: 0; background: var(--gold); color: var(--gold-ink); cursor: pointer; }
+.signup .ok { font-weight: 700; }
+
+.month { margin-top: 28px; }
+.month h2 { font: 800 18px var(--display); letter-spacing: -.01em; margin: 0 0 10px; }
+.rel { display: grid; grid-template-columns: 70px 1fr auto; gap: 4px 14px; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+.rel .d { font: 600 14px var(--mono); color: var(--accent); }
+.rel .t { font-weight: 700; min-width: 0; }
+.rel .t small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+.changes { margin: 0; padding-left: 18px; font-size: 15px; }
+.changes li { margin-bottom: 6px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) {
+  .game-head { grid-template-columns: 1fr; }
+  .cart { width: 140px; }
+  .verdict { grid-template-columns: 1fr; }
+  .rel { grid-template-columns: 1fr auto; }
+  .rel .d { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<div class="mock-banner">MOCKUP · items tagged SAMPLE will be filled by the automation · <span id="store-note"></span></div>
+
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="#game" aria-label="Nintendo Critic home"><svg viewBox="0 0 48 56" aria-hidden="true"><path d="M8 2H32.5L44 13.5V50Q44 54 40 54H8Q4 54 4 50V6Q4 2 8 2Z" fill="var(--accent)"/><rect x="10" y="9" width="27" height="25" rx="3.5" fill="var(--gold)"/><path d="M15.5 21.5L21.5 27.5L31.5 15.5" fill="none" stroke="var(--check)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="11.0" y="44" width="3.2" height="7" rx="1" fill="var(--bg)" opacity=".6"/><rect x="16.6" y="44" width="3.2" height="7" rx="1" fill="var(--bg)" opacity=".6"/><rect x="22.2" y="44" width="3.2" height="7" rx="1" fill="var(--bg)" opacity=".6"/><rect x="27.8" y="44" width="3.2" height="7" rx="1" fill="var(--bg)" opacity=".6"/><rect x="33.4" y="44" width="3.2" height="7" rx="1" fill="var(--bg)" opacity=".6"/></svg><span class="wm"><small>NINTENDO</small><b>Critic</b></span></a>
+    <nav class="main" aria-label="Main">
+      <button type="button" data-view="game" aria-current="page">Game page</button>
+      <button type="button" data-view="keycards">Game-key cards</button>
+      <button type="button" data-view="compat">Compatibility</button>
+      <button type="button" data-view="upgrades">Upgrades</button>
+      <button type="button" data-view="radar">Coming soon</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- GAME PAGE -->
+  <section id="view-game" aria-labelledby="g-title">
+    <div class="game-head">
+      <div class="cart" aria-hidden="true"><div class="label"><small>SWITCH 2</small><b>Sonic X Shadow Generations</b></div><div class="pins"></div></div>
+      <div>
+        <div class="eyebrow">Switch 2 game check · Sega · Updated Oct 2026</div>
+        <h1 id="g-title">Sonic X Shadow Generations on Switch 2</h1>
+        <p class="lede">Is it a full cartridge? Does it run better? Should you buy it again? Everything to know before you buy.</p>
+        <p style="margin:14px 0 0"><span class="pill gkc">Game-key card</span></p>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="tag">✓ VERDICT</div>
+      <p><strong>Buy it if you haven't played it.</strong> The Switch 2 version adds a 60 fps mode, but if you already own it on Switch 1, the extra cost is hard to justify.</p>
+    </div>
+
+    <div class="facts">
+      <div class="fact">
+        <span class="k">What's in the box</span>
+        <span class="v">Game-key card</span>
+        <p class="n">The cartridge is a key. Download the game first, then it plays offline with the cart inserted.</p>
+      </div>
+      <div class="fact">
+        <span class="k">Download size <span class="sample">SAMPLE</span></span>
+        <span class="v">— GB</span>
+        <p class="n">Taken from the Nintendo eShop listing. Over about 20 GB, you'll likely want a microSD Express card.</p>
+      </div>
+      <div class="fact">
+        <span class="k">Region differences <span class="sample">SAMPLE</span></span>
+        <span class="v">Same everywhere</span>
+        <p class="n">Flags games that are a full cart in one region and a game-key card in another.</p>
+      </div>
+      <div class="fact">
+        <span class="k">Compatibility</span>
+        <span class="v">Native Switch 2 game</span>
+        <p class="n">For Switch 1 games, this shows Nintendo's compatibility status and any fixes.</p>
+      </div>
+    </div>
+
+    <div class="played">
+      <div class="who">We played it · handheld and TV</div>
+      <p class="placeholder">Your own two or three sentences go here after playing: how it feels handheld, whether the 60 fps mode is worth the lower resolution, anything the reviews missed. This is the part Google rewards most.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Already own it? <span class="sample">SAMPLE PRICES</span></h2>
+      <p class="sub">The cheapest way to play on Switch 2, based on what you already have.</p>
+      <div class="calc">
+        <div class="toggle" role="group" aria-label="Do you own the Switch 1 version?">
+          <button type="button" data-own="no" aria-pressed="true">I don't own it</button>
+          <button type="button" data-own="yes" aria-pressed="false">I own the Switch 1 version</button>
+        </div>
+        <div class="calc-out" id="calc-out"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Performance on Switch 2</h2>
+      <table>
+        <thead><tr><th scope="col">Mode</th><th scope="col">Resolution</th><th scope="col">Frame rate</th><th scope="col">Best for</th></tr></thead>
+        <tbody>
+          <tr><td>Quality</td><td class="num">1080p</td><td class="num">30 fps</td><td>TV play</td></tr>
+          <tr><td>Performance</td><td class="num">720p</td><td class="num">60 fps</td><td>Handheld play</td></tr>
+        </tbody>
+      </table>
+      <p class="sub" style="margin:12px 0 0">Digital Foundry analysis: none yet. We'll link it when one is published.</p>
+    </div>
+
+    <div class="panel">
+      <h2>What the reviews say</h2>
+      <p class="sub">Reviews of the Switch 2 version, summarised in our own words. Follow the links for the full reviews.</p>
+      <div class="scroll">
+      <table>
+        <thead><tr><th scope="col">Outlet</th><th scope="col">Played on</th><th scope="col">Score</th><th scope="col">In short</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://nintendoeverything.com/sonic-x-shadow-generations-switch-2-review/" target="_blank" rel="noopener">Nintendo Everything</a></td><td>Switch 2</td><td class="num">—</td><td>Prefers the 60 fps mode for handheld play, but says it isn't worth paying full price again if you already own it.</td></tr>
+          <tr><td>Nintendo Life <span class="sample">SAMPLE</span></td><td>—</td><td class="num">—</td><td>Filled in automatically when the review is published.</td></tr>
+          <tr><td>Nintendo World Report <span class="sample">SAMPLE</span></td><td>—</td><td class="num">—</td><td>Filled in automatically when the review is published.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="sub" style="margin:12px 0 0">Overall scores: <a href="https://www.metacritic.com/search/sonic%20x%20shadow%20generations/" target="_blank" rel="noopener">Metacritic</a> · <a href="https://opencritic.com/search?criteria=sonic%20x%20shadow%20generations" target="_blank" rel="noopener">OpenCritic</a></p>
+    </div>
+
+    <div class="buy">
+      <a class="btn" id="buy-btn" href="https://www.amazon.com/s?k=Sonic+X+Shadow+Generations+Nintendo+Switch+2&amp;tag=magpie014-20" rel="sponsored noopener" target="_blank">Check price on Amazon</a>
+      <span class="aff-note">We earn a small commission if you buy through this link, at no cost to you.</span>
+    </div>
+
+    <div class="signup">
+      <h2>Know what's in the box before you buy</h2>
+      <p>One email a week: new Switch 2 releases, which ones are game-key cards, and compatibility fixes. Unsubscribe anytime.</p>
+      <form class="kit-form"><label for="email-game" class="sr">Email address</label><input id="email-game" type="email" required placeholder="you@example.com" autocomplete="email"><button type="submit">Sign me up</button></form>
+    </div>
+
+    <div class="sources">
+      <strong>Sources · checked Oct 2026</strong>
+      <ul>
+        <li><a href="https://nintendoeverything.com/sonic-x-shadow-generations-switch-2-review/" target="_blank" rel="noopener">Nintendo Everything: Switch 2 review and performance modes</a></li>
+        <li><a href="https://www.destructoid.com/all-switch-2-game-key-card-titles-listed/" target="_blank" rel="noopener">Destructoid: game-key card titles</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- GAME-KEY CARD HUB -->
+  <section id="view-keycards" aria-labelledby="k-title" hidden>
+    <div class="eyebrow">Switch 2 buyer's guide · Updated Oct 2026</div>
+    <h1 id="k-title">Every Switch 2 game-key card</h1>
+    <p class="lede">Some boxed Switch 2 games don't have the game on the cartridge. Search any game to see what you're actually buying.</p>
+
+    <div class="explainer">
+      <div><span class="pill full">Full cartridge</span><p>The whole game is on the cart. Plays straight away, no download, and you can resell it.</p></div>
+      <div><span class="pill gkc">Game-key card</span><p>The cart is a key. You download the game first, and the cart must be inserted to play.</p></div>
+      <div><span class="pill code">Code in a box</span><p>No cartridge at all, just a download code. Can't be resold.</p></div>
+    </div>
+
+    <div class="controls" role="search">
+      <label for="q" class="eyebrow" style="flex-basis:100%">Search games</label>
+      <input id="q" type="search" placeholder="Try “Yakuza” or “Mario”" autocomplete="off">
+      <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" class="chip" data-filter="full" aria-pressed="false">Full cartridge</button>
+      <button type="button" class="chip" data-filter="gkc" aria-pressed="false">Game-key card</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="list">
+        <thead><tr><th scope="col">Game</th><th scope="col">Publisher</th><th scope="col">Cartridge</th><th scope="col">Buy</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>No games match. Try a shorter search.</div>
+    </div>
+    <div class="count" id="count"></div>
+  </section>
+
+  <!-- COMPATIBILITY -->
+  <section id="view-compat" aria-labelledby="c-title" hidden>
+    <div class="eyebrow">Switch 1 games on Switch 2 · Updated Oct 2026</div>
+    <h1 id="c-title">Does my Switch 1 game work on Switch 2?</h1>
+    <p class="lede">Nearly all Switch 1 games work. Search yours to see if it's one of the few with problems, and whether it's been fixed.</p>
+
+    <div class="controls" role="search">
+      <label for="cq" class="eyebrow" style="flex-basis:100%">Search Switch 1 games and apps</label>
+      <input id="cq" type="search" placeholder="Try “Rocket League” or “Ring Fit”" autocomplete="off">
+    </div>
+    <div class="table-wrap">
+      <table class="list">
+        <thead><tr><th scope="col">Game or app</th><th scope="col">Status</th><th scope="col">Details</th></tr></thead>
+        <tbody id="crows"></tbody>
+      </table>
+      <div class="empty" id="cempty" hidden>Not on the problem list, so it should work fine. Nintendo reports nearly all Switch 1 games run on Switch 2.</div>
+    </div>
+    <div class="count">Status from Nintendo's compatibility list, checked daily. Launch-issue statuses are from June 2025 reports and need rechecking.</div>
+
+    <div class="panel">
+      <h2>Recent changes <span class="sample">SAMPLE</span></h2>
+      <p class="sub">The daily check logs every change on Nintendo's list here.</p>
+      <ul class="changes">
+        <li><strong>Example:</strong> a game moves from "issues reported" to "fixed", with the system update or game patch that fixed it.</li>
+        <li><strong>Example:</strong> a newly reported issue is added with Nintendo's description.</li>
+      </ul>
+    </div>
+    <div class="signup">
+      <h2>Know what's in the box before you buy</h2>
+      <p>One email a week: new Switch 2 releases, which ones are game-key cards, and compatibility fixes. Unsubscribe anytime.</p>
+      <form class="kit-form"><label for="email-compat" class="sr">Email address</label><input id="email-compat" type="email" required placeholder="you@example.com" autocomplete="email"><button type="submit">Sign me up</button></form>
+    </div>
+  </section>
+
+  <!-- UPGRADES -->
+  <section id="view-upgrades" aria-labelledby="u-title" hidden>
+    <div class="eyebrow">Switch 2 Editions and upgrades · Updated Oct 2026</div>
+    <h1 id="u-title">Switch 2 upgrades: what they cost and what you get</h1>
+    <p class="lede">Some Switch 1 games get a paid Switch 2 Edition upgrade, some get a free update, and some are free with Nintendo Switch Online + Expansion Pack.</p>
+    <div class="panel">
+      <div class="scroll">
+      <table>
+        <thead><tr><th scope="col">Game</th><th scope="col">Type</th><th scope="col">If you own Switch 1 version</th><th scope="col">What improves</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Kirby and the Forgotten Land</strong></td><td><span class="pill full">Switch 2 Edition</span></td><td>Upgrade pack, about $10 USD</td><td>Switch 2 Edition content <span class="sample">SAMPLE</span></td></tr>
+          <tr><td><strong>Super Mario Party Jamboree</strong></td><td><span class="pill full">Switch 2 Edition</span></td><td>Upgrade pack, about $10 USD</td><td>Switch 2 Edition content <span class="sample">SAMPLE</span></td></tr>
+          <tr><td><strong>Zelda: Breath of the Wild</strong></td><td><span class="pill full">Switch 2 Edition</span></td><td>Free with NSO + Expansion Pack</td><td>Better performance and load times</td></tr>
+          <tr><td><strong>Zelda: Tears of the Kingdom</strong></td><td><span class="pill full">Switch 2 Edition</span></td><td>Free with NSO + Expansion Pack</td><td>Better performance and load times</td></tr>
+          <tr><td><strong>Xenoblade Chronicles 3</strong></td><td><span class="pill full">Switch 2 Edition</span></td><td>Price not confirmed <span class="sample">SAMPLE</span></td><td>4K docked, 60 fps target, fully voiced cutscenes, new Heroes' Vault mode. Out Dec 3.</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:12px;color:var(--muted);font-size:14px">Prices in US dollars from Nintendo's 2025 announcements; Canadian prices are added when the automation is live.</p>
+  </section>
+
+  <!-- RELEASE RADAR -->
+  <section id="view-radar" aria-labelledby="r-title" hidden>
+    <div class="eyebrow">Release radar · Updated Oct 9, 2026</div>
+    <h1 id="r-title">Upcoming Switch 2 games</h1>
+    <p class="lede">Release dates and what's in the box. Cartridge types are added as soon as publishers confirm them, so you know before you pre-order.</p>
+    <div id="radar"></div>
+    <div class="count">Dates from publisher announcements and release roundups. Smaller titles are unconfirmed until the automation checks them.</div>
+    <div class="signup">
+      <h2>Know what's in the box before you buy</h2>
+      <p>One email a week: new Switch 2 releases, which ones are game-key cards, and compatibility fixes. Unsubscribe anytime.</p>
+      <form class="kit-form"><label for="email-radar" class="sr">Email address</label><input id="email-radar" type="email" required placeholder="you@example.com" autocomplete="email"><button type="submit">Sign me up</button></form>
+    </div>
+  </section>
+
+</main>
+<footer>
+  <div class="wrap">
+    <p><strong>Nintendo Critic</strong> is an independent buyer's guide. Not affiliated with, endorsed or sponsored by Nintendo. Game names are trademarks of their owners.</p>
+    <p>As an Amazon Associate we earn from qualifying purchases.</p>
+  </div>
+</footer>
+
+<script>
+// Send Canadian visitors to amazon.ca (guessed from browser time zone / language), everyone else to amazon.com.
+const CA_ZONES = /^America\/(Toronto|Montreal|Vancouver|Edmonton|Winnipeg|Regina|Swift_Current|Halifax|Glace_Bay|Moncton|Goose_Bay|St_Johns|Whitehorse|Dawson|Dawson_Creek|Fort_Nelson|Creston|Yellowknife|Inuvik|Cambridge_Bay|Rankin_Inlet|Iqaluit|Resolute|Atikokan|Blanc-Sablon|Nipigon|Thunder_Bay|Rainy_River|Pangnirtung)$/;
+function isCanada() {
+  try {
+    if (CA_ZONES.test(Intl.DateTimeFormat().resolvedOptions().timeZone)) return true;
+  } catch (e) {}
+  return (navigator.languages || [navigator.language]).some(l => /-CA$/i.test(l || ""));
+}
+const STORE = isCanada()
+  ? { host: "https://www.amazon.ca", tag: "thekitmag-20", name: "Amazon.ca" }
+  : { host: "https://www.amazon.com", tag: "magpie014-20", name: "Amazon" };
+// Sample rows — sourced from 2025 press lists (Destructoid, Nintenderos); must be re-verified before launch.
+const GAMES = [
+  ["Mario Kart World", "Nintendo", "full"],
+  ["Donkey Kong Bananza", "Nintendo", "full"],
+  ["Cyberpunk 2077: Ultimate Edition", "CD Projekt", "full"],
+  ["Bravely Default: Flying Fairy HD Remaster", "Square Enix", "gkc"],
+  ["Daemon X Machina: Titanic Scion", "Marvelous", "gkc"],
+  ["EA Sports Madden NFL 26", "EA", "gkc"],
+  ["Hitman World of Assassination: Signature Edition", "IOI", "gkc"],
+  ["NBA 2K26", "2K", "gkc"],
+  ["No Sleep For Kaname Date", "Spike Chunsoft", "gkc"],
+  ["Persona 3 Reload", "Atlus", "gkc"],
+  ["Puyo Puyo Tetris 2S", "Sega", "gkc"],
+  ["Raidou Remastered", "Atlus", "gkc"],
+  ["Sonic X Shadow Generations", "Sega", "gkc"],
+  ["Star Wars Outlaws", "Ubisoft", "gkc"],
+  ["Street Fighter 6: Years 1-2 Fighters Edition", "Capcom", "gkc"],
+  ["Yakuza 0: Director's Cut", "Sega", "gkc"],
+];
+const LABEL = { full: "Full cartridge", gkc: "Game-key card", code: "Code in a box" };
+let filter = "all";
+
+function amazon(name) {
+  return STORE.host + "/s?k=" + encodeURIComponent(name + " Nintendo Switch 2") + "&tag=" + STORE.tag;
+}
+const buyBtn = document.getElementById("buy-btn");
+buyBtn.href = amazon("Sonic X Shadow Generations");
+buyBtn.textContent = "Check price on " + STORE.name;
+document.getElementById("store-note").textContent = "Links go to " + STORE.host.replace("https://www.", "") + " (" + STORE.tag + ")";
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function render() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const rows = GAMES.filter(([n, p, t]) =>
+    (filter === "all" || t === filter) && (!q || n.toLowerCase().includes(q) || p.toLowerCase().includes(q)));
+  document.getElementById("rows").innerHTML = rows.map(([n, p, t]) =>
+    `<tr><td class="game">${esc(n)}</td><td class="pub">${esc(p)}</td><td><span class="pill ${t}">${LABEL[t]}</span></td>` +
+    `<td><a class="amz" href="${amazon(n)}" target="_blank" rel="sponsored noopener">Amazon ↗</a></td></tr>`).join("");
+  document.getElementById("empty").hidden = rows.length > 0;
+  const gkc = rows.filter(r => r[2] === "gkc").length;
+  document.getElementById("count").textContent = `${rows.length} games shown · ${gkc} game-key cards`;
+}
+
+document.getElementById("q").addEventListener("input", render);
+document.querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+  filter = b.dataset.filter;
+  document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === b)));
+  render();
+}));
+
+const VIEWS = ["game", "keycards", "compat", "upgrades", "radar"];
+function show(view) {
+  VIEWS.forEach(v => { document.getElementById("view-" + v).hidden = v !== view; });
+  document.querySelectorAll("nav.main button[data-view]").forEach(b => {
+    if (b.dataset.view === view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+}
+document.querySelectorAll("nav.main button[data-view]").forEach(b => b.addEventListener("click", () => { show(b.dataset.view); window.scrollTo(0, 0); }));
+document.querySelector(".logo").addEventListener("click", e => { e.preventDefault(); show("game"); });
+
+// Compatibility: only games with known problems are listed. Sample statuses from June 2025 reports.
+const COMPAT = [
+  ["Plants vs. Zombies: Battle for Neighborville", "warn", "Issues reported at launch", "Check Nintendo's list for the current status."],
+  ["Rocket League", "warn", "Issues reported at launch", "Check Nintendo's list for the current status."],
+  ["Saints Row IV: Re-Elected", "warn", "Issues reported at launch", "Check Nintendo's list for the current status."],
+  ["UNDER NIGHT IN-BIRTH Exe:Late[cl-r]", "warn", "Issues reported at launch", "Check Nintendo's list for the current status."],
+  ["Wolfenstein II: The New Colossus", "warn", "Issues reported at launch", "Check Nintendo's list for the current status."],
+  ["Ring Fit Adventure", "full", "Works, with a catch", "The Leg Strap and Ring-Con need an original Switch 1 Joy-Con."],
+  ["Nintendo Labo VR Kit", "bad", "Partly", "The Switch 2 doesn't fit in the Toy-Con VR Goggles."],
+  ["Hulu (app)", "bad", "Not compatible", "The app can't be used on Switch 2."],
+  ["Crunchyroll (app)", "bad", "Not compatible", "The app can't be used on Switch 2."],
+  ["InkyPen (app)", "bad", "Not compatible", "The app can't be used on Switch 2."],
+];
+function renderCompat() {
+  const q = document.getElementById("cq").value.trim().toLowerCase();
+  const rows = COMPAT.filter(([n]) => !q || n.toLowerCase().includes(q));
+  document.getElementById("crows").innerHTML = rows.map(([n, c, st, d]) =>
+    `<tr><td class="game">${esc(n)}</td><td><span class="pill ${c}">${esc(st)}</span></td><td>${esc(d)}</td></tr>`).join("");
+  document.getElementById("cempty").hidden = rows.length > 0;
+}
+document.getElementById("cq").addEventListener("input", renderCompat);
+renderCompat();
+
+// Release radar. Cartridge type stays "Not announced" until confirmed.
+const RADAR = [
+  ["October 2026", [["Oct 9", "Dragon's Dogma 2: Dark Arisen", "Capcom"], ["Oct 29", "Hello Kitty Party Land", ""]]],
+  ["November 2026", [["Nov 3", "Godzilla: Destroy All Monsters Melee Remastered", ""], ["Nov 5", "Crymelight", ""], ["Nov 6", "Hasbro Games Junior Collection", ""], ["Nov 12", "Barbie Rewind", ""], ["Nov 12", "Metaphor: ReFantazio", "Atlus"]]],
+  ["December 2026", [["Dec 3", "Dragon Quest Monsters: The Withered World", "Square Enix"], ["Dec 3", "Xenoblade Chronicles 3 Switch 2 Edition", "Nintendo"], ["Dec 10", "Professor Layton and the New World of Steam", "Level-5"]]],
+  ["Date to be announced", [["2026", "The Legend of Zelda: Ocarina of Time remake", "Nintendo"], ["2026", "The Duskbloods", "FromSoftware"]]],
+];
+document.getElementById("radar").innerHTML = RADAR.map(([m, games]) =>
+  `<div class="month"><h2>${m}</h2>` + games.map(([d, n, p]) =>
+    `<div class="rel"><span class="d">${d}</span><span class="t">${esc(n)}${p ? `<small>${esc(p)}</small>` : ""}</span><span class="pill code">Not announced</span></div>`).join("") + `</div>`).join("");
+
+// Upgrade calculator (sample prices)
+const PRICES = { switch2: 59.99, switch1: 39.99, upgrade: null };
+function renderCalc(own) {
+  const opts = own
+    ? (PRICES.upgrade != null
+        ? [["Upgrade pack", PRICES.upgrade, "Keeps your save and adds the Switch 2 version."], ["Buy the Switch 2 version", PRICES.switch2, "Only if you want a new cartridge."]]
+        : [["Play your Switch 1 copy", 0, "Runs on Switch 2 through backward compatibility, without the 60 fps mode."], ["Buy the Switch 2 version", PRICES.switch2, "No upgrade pack is offered, so this is the only way to get the improvements."]])
+    : [["Switch 2 version", PRICES.switch2, "The best way to play it on Switch 2."], ["Switch 1 version", PRICES.switch1, "Cheaper, plays on Switch 2, but without the improvements."]];
+  const best = opts.reduce((a, b) => (own ? a : (a[1] >= b[1] ? a : b)));
+  document.getElementById("calc-out").innerHTML = opts.map(o =>
+    `<div class="path${o === opts[0] ? " best" : ""}">${o === opts[0] ? `<span class="flag">Our pick</span>` : ""}<span class="price">${o[1] === 0 ? "Free" : "$" + o[1].toFixed(2)}</span><strong>${o[0]}</strong><span class="what">${o[2]}</span></div>`).join("");
+}
+document.querySelectorAll(".toggle button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".toggle button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  renderCalc(b.dataset.own === "yes");
+}));
+renderCalc(false);
+
+// Email sign-up: connects to Kit on the real site
+document.querySelectorAll(".kit-form").forEach(f => f.addEventListener("submit", e => {
+  e.preventDefault();
+  f.outerHTML = `<p class="ok">Thanks! On the live site this adds you to the Kit list.</p>`;
+}));
+
+render();
+show(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "game");
+</script>
