@@ -1,0 +1,695 @@
+{
+ "checked": "2026-10-10",
+ "paid": [
+  {
+   "name": "4PGP",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "A-Train: All Aboard Tourism",
+   "price": 6.99,
+   "nintendo": false
+  },
+  {
+   "name": "Animal Crossing: New Horizons",
+   "price": 4.99,
+   "nintendo": true
+  },
+  {
+   "name": "Another Eden Begins",
+   "price": 5.0,
+   "nintendo": false
+  },
+  {
+   "name": "Atelier Yumia: The Alchemist of Memories & the Envisioned Land",
+   "price": 10.0,
+   "nintendo": false
+  },
+  {
+   "name": "Bang Bang Bandits",
+   "price": 3.0,
+   "nintendo": false
+  },
+  {
+   "name": "Beyblade X Evobattle",
+   "price": 9.99,
+   "nintendo": false
+  },
+  {
+   "name": "Botany Manor",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Braid: Anniversary Edition",
+   "price": 2.99,
+   "nintendo": false
+  },
+  {
+   "name": "Broken Sword – Shadow of the Templars: Reforged",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Card-en-Ciel",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Chippy&Noppo",
+   "price": 2.4,
+   "nintendo": false
+  },
+  {
+   "name": "Culdcept Begins",
+   "price": 10.0,
+   "nintendo": false
+  },
+  {
+   "name": "Dark Auction",
+   "price": 1.0,
+   "nintendo": false
+  },
+  {
+   "name": "Demon Castle Story",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Dream Town Island",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Dungeon Village 2",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Fantasy Life i: The Girl Who Steals Time",
+   "price": 2.59,
+   "nintendo": false
+  },
+  {
+   "name": "Fruit Mountain Party",
+   "price": 2.99,
+   "nintendo": false
+  },
+  {
+   "name": "Game Dev Story",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Go-Go Town",
+   "price": 3.0,
+   "nintendo": false
+  },
+  {
+   "name": "Gunvolt Chronicles: Luminous Avenger iX 1+2 Dual Collection",
+   "price": 5.0,
+   "nintendo": false
+  },
+  {
+   "name": "Hello Kitty Island Adventure",
+   "price": 9.99,
+   "nintendo": false
+  },
+  {
+   "name": "Hololive Treasure Mountain MegaPack",
+   "price": 2.99,
+   "nintendo": false
+  },
+  {
+   "name": "Human Fall Flat",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Jumbo Airport Story",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Kirby and the Forgotten Land",
+   "price": 19.99,
+   "nintendo": true,
+   "note": "Switch 2 Edition plus the new Star-Crossed World adventure."
+  },
+  {
+   "name": "Inazuma Eleven: Victory Road",
+   "price": 2.59,
+   "nintendo": false
+  },
+  {
+   "name": "Isekai Rondo",
+   "price": 0.99,
+   "nintendo": false
+  },
+  {
+   "name": "Isekai Villain",
+   "price": 0.99,
+   "nintendo": false
+  },
+  {
+   "name": "Kuukiyomi 4: Consider It",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Lollipop Chainsaw RePOP",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Memory of Memorie: A Chill Story",
+   "price": 1.99,
+   "nintendo": false
+  },
+  {
+   "name": "Metroid Prime 4: Beyond",
+   "price": 9.99,
+   "nintendo": true
+  },
+  {
+   "name": "Moonlight Peaks",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Novel Rogue",
+   "price": 0.99,
+   "nintendo": false
+  },
+  {
+   "name": "Overcooked! 2",
+   "price": 9.99,
+   "nintendo": false
+  },
+  {
+   "name": "Overrogue",
+   "price": 0.99,
+   "nintendo": false
+  },
+  {
+   "name": "Party Party Time 3",
+   "price": 1.0,
+   "nintendo": false
+  },
+  {
+   "name": "Pokémon Legends: Z-A",
+   "price": 9.99,
+   "nintendo": true
+  },
+  {
+   "name": "Pritto Prisoner",
+   "price": 1.0,
+   "nintendo": false
+  },
+  {
+   "name": "R-Type Tactics I • II Cosmos",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "RollerCoaster Tycoon Classic",
+   "price": 5.0,
+   "nintendo": false
+  },
+  {
+   "name": "Romancing SaGa 2: Revenge of the Seven",
+   "price": 9.99,
+   "nintendo": false
+  },
+  {
+   "name": "Rune Factory: Guardians of Azuma",
+   "price": 10.0,
+   "nintendo": false
+  },
+  {
+   "name": "Sid Meier's Civilization VII",
+   "price": 9.99,
+   "nintendo": false
+  },
+  {
+   "name": "Skyship Quest Story",
+   "price": 3.99,
+   "nintendo": false
+  },
+  {
+   "name": "Sonic Racing: CrossWorlds",
+   "price": 10.0,
+   "nintendo": false
+  },
+  {
+   "name": "Spirit Valor",
+   "price": 0.99,
+   "nintendo": false
+  },
+  {
+   "name": "Starbites",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Story of Seasons: Grand Bazaar",
+   "price": 10.0,
+   "nintendo": false
+  },
+  {
+   "name": "Super Mario Bros. Wonder",
+   "price": 19.99,
+   "nintendo": true
+  },
+  {
+   "name": "Super Mario Party Jamboree",
+   "price": 19.99,
+   "nintendo": true,
+   "note": "Switch 2 Edition plus Jamboree TV, which adds camera and microphone games."
+  },
+  {
+   "name": "Tamagotchi Plaza",
+   "price": 10.0,
+   "nintendo": false
+  },
+  {
+   "name": "The Exit 8",
+   "price": 1.0,
+   "nintendo": false
+  },
+  {
+   "name": "The Fox's Way Home",
+   "price": 2.99,
+   "nintendo": false
+  },
+  {
+   "name": "The Prince of Tennis Doki Doki Survival – Eternal Passion Tie Break Game",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "The Prince of Tennis Sweet School Festival – 40 and More",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "The Rumble Fish 2",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "The Legend of Zelda: Breath of the Wild",
+   "price": 9.99,
+   "nintendo": true,
+   "note": "Switch 2 Edition. Free with Nintendo Switch Online + Expansion Pack.",
+   "nso": true
+  },
+  {
+   "name": "The Legend of Zelda: Tears of the Kingdom",
+   "price": 9.99,
+   "nintendo": true,
+   "note": "Switch 2 Edition. Free with Nintendo Switch Online + Expansion Pack.",
+   "nso": true
+  },
+  {
+   "name": "Touhou Yukkuri Mountain",
+   "price": 1.49,
+   "nintendo": false
+  },
+  {
+   "name": "Trails in the Sky 1st Chapter",
+   "price": 1.0,
+   "nintendo": false
+  },
+  {
+   "name": "Trails in the Sky 2nd Chapter",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Viractal: Will You Trust Your Party",
+   "price": 9.99,
+   "nintendo": false
+  },
+  {
+   "name": "Wobbly Life",
+   "price": 4.99,
+   "nintendo": false
+  },
+  {
+   "name": "Xenoblade Chronicles: Definitive Edition",
+   "price": 9.99,
+   "nintendo": true
+  },
+  {
+   "name": "Xenoblade Chronicles 2",
+   "price": 9.99,
+   "nintendo": true
+  },
+  {
+   "name": "Xenoblade Chronicles X: Definitive Edition",
+   "price": 4.99,
+   "nintendo": true
+  }
+ ],
+ "free": [
+  {
+   "name": "1000xResist",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Absolum",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Another Crab's Treasure",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Asphalt Legends",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Ball x Pit",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Blood: Refreshed Supply",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Blood Dungeon",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Brotato",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Cast 'n' Chill",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Citizen Sleeper",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Citizen Sleeper 2",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Core Keeper",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Cozy Grove",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Cozy Grove: Camp Spirit",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Dave the Diver",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Dinkum",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Disney Dreamlight Valley",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Disney Speedstorm",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Dispatch",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Divinity: Original Sin 2",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Factorio",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Final Fantasy Tactics: The Ivalice Chronicles",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Fountains",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Hades II",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "High On Life",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Hollow Knight",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Hollow Knight: Silksong",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Kingdom's Return: Time-Eating Fruit and the Ancient Monster",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "LEGO Party",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Little Rocket Lab",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Lou's Lagoon",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Lynked: Banner of the Spark",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Mina the Hollower",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Minishoot' Adventures",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Moomintroll: Winter's Warmth",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "No Man's Sky",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "One Piece: Pirate Warriors 4",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Outlaws + Handful of Missions: Remaster",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Pipistrello and the Cursed Yoyo",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Planet of Lana II",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Psyvariar 3",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Red Dead Redemption",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Sail Forth",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Sayonara Wild Hearts",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Sin: Reloaded",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Shadow Labyrinth",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Shuten Order",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Simogo Legacy Collection",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Soma",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Stardew Valley",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Storm Lancers",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Subnautica",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Subnautica: Below Zero",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Super Bomberman Collection",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "System Shock 2: 25th Anniversary Remaster",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Tales of the Shire: A The Lord of the Rings Game",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "The Drifter",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Twofold",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Unrailed 2",
+   "price": 0.0,
+   "nintendo": false
+  },
+  {
+   "name": "Woodo",
+   "price": 0.0,
+   "nintendo": false
+  }
+ ],
+ "nintendo_free_updates": [
+  "ARMS",
+  "Big Brain Academy: Brain vs. Brain",
+  "Captain Toad: Treasure Tracker",
+  "Clubhouse Games: 51 Worldwide Classics",
+  "Donkey Kong Country Returns HD",
+  "Game Builder Garage",
+  "Mario Kart 8 Deluxe",
+  "New Super Mario Bros. U Deluxe",
+  "Pikmin 3 Deluxe",
+  "Pokémon Scarlet and Violet",
+  "Splatoon 3",
+  "Super Mario 3D World + Bowser's Fury",
+  "Super Mario Odyssey",
+  "The Legend of Zelda: Echoes of Wisdom",
+  "The Legend of Zelda: Link's Awakening"
+ ],
+ "coming": [
+  {
+   "name": "Pikmin 4",
+   "note": "Switch 2 Edition plus Dandori Academy, due November 12, 2026."
+  }
+ ],
+ "sources": [
+  {
+   "title": "List of all prices for Nintendo Switch 2 upgrade packs (Nintendo Everything, Oct 3, 2026)",
+   "url": "https://nintendoeverything.com/list-of-all-prices-for-nintendo-switch-2-upgrade-packs/"
+  },
+  {
+   "title": "All Switch 2 Edition games, upgrade packs and free performance updates (Nintendo Life)",
+   "url": "https://www.nintendolife.com/guides/all-nintendo-switch-2-edition-games-upgrade-packs-and-free-performance-updates"
+  },
+  {
+   "title": "Nintendo announces free Switch 2 upgrades for twelve Switch 1 games (Notebookcheck)",
+   "url": "https://www.notebookcheck.net/Nintendo-announces-free-Switch-2-upgrades-for-twelve-Switch-1-games.1018029.0.html"
+  }
+ ]
+}

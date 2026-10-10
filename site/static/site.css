@@ -297,3 +297,13 @@ a.gcard:hover .t { color: var(--accent); }
   .grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .gcard .art .cover, .shots img { transition: none; } }
+
+/* "Is X worth it on Switch 2?" panel: verdict and the hands-on note together */
+.worth .verdict { margin-top: 0; }
+.worth .played { margin-top: 14px; }
+/* Nintendo-published tag on the upgrades list */
+.pill.nin { color: var(--gkc); background: var(--gkc-bg); font-size: 11px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+.pill.nin::before { display: none; }
+.faq h3 { font: 700 17px var(--display); margin: 18px 0 6px; }
+.faq h3:first-of-type { margin-top: 8px; }
+.faq p { margin: 0; }

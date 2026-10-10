@@ -232,6 +232,8 @@ def game_page(g):
     if g.get("Verdict") or g.get("Verdict headline"):
         verdict = (f'<div class="verdict"><div class="tag">✓ VERDICT</div><p>'
                    f'{"<strong>" + e(g["Verdict headline"]) + "</strong> " if g.get("Verdict headline") else ""}{e(g.get("Verdict", ""))}</p></div>')
+    # "Is X worth it on Switch 2?" is what people search, so the verdict and the hands-on note sit under that question.
+    worth_q = f"Is {name} worth it on Switch 2?"
 
     facts = []
     cart_note = {
@@ -249,8 +251,11 @@ def game_page(g):
     if is_edition or (g.get("Upgrade path") and g["Upgrade path"] != "Not announced"):
         price = g.get("Upgrade price USD")
         v = g.get("Upgrade path") or "Not announced"
-        facts.append(("If you own the Switch 1 version", v,
-                      f"About ${price:g} USD." if price else "Price not confirmed yet." if v == "Paid upgrade pack" else ""))
+        if v == "Free with NSO Expansion Pack" and price:
+            v, n = f"${price:.2f} upgrade pack", "Free if you have Nintendo Switch Online + Expansion Pack."
+        else:
+            n = f"${price:.2f} in the US." if price else "Price not confirmed yet." if v == "Paid upgrade pack" else ""
+        facts.append(("If you own the Switch 1 version", v, n))
     if g.get("Download size GB"):
         facts.append(("Download size", f'{g["Download size GB"]:g} GB', "From the Nintendo eShop listing. Over about 20 GB, you'll likely want a microSD Express card."))
     kind = CART_KIND.get(cart, "tba")
@@ -264,7 +269,10 @@ def game_page(g):
 
     played = ""
     if g.get("We played it"):
-        played = f'<div class="played"><div class="who">We played it</div><p>{e(g["We played it"])}</p></div>'
+        when = f' · {fmt_date(g["Played date"])}' if g.get("Played date") else ""
+        played = (f'<div class="played"><div class="who">Played on Switch 2 · Mike Johnston{when}</div>'
+                  f'<p>{e(g["We played it"])}</p></div>')
+    worth = (f'<div class="panel worth"><h2>{e(worth_q)}</h2>{verdict}{played}</div>' if verdict or played else "")
 
     notes = f'<div class="panel"><h2>Good to know</h2><p class="notes">{e(g["Notes"])}</p></div>' if g.get("Notes") and g.get("Approved") else ""
 
@@ -278,7 +286,7 @@ def game_page(g):
                 rows.append(f'<tr><td>{e(mode)}</td><td class="num">{e(parts[0])}</td><td class="num">{e(parts[1])}</td></tr>')
             else:
                 rows.append(f'<tr><td colspan="3">{e(line)}</td></tr>')
-        perf = ('<div class="panel"><h2>Performance on Switch 2</h2><table><thead><tr><th scope="col">Mode</th>'
+        perf = (f'<div class="panel"><h2>How does {e(name)} run on Switch 2?</h2><table><thead><tr><th scope="col">Mode</th>'
                 '<th scope="col">Resolution</th><th scope="col">Frame rate</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>")
 
     # Trailer + screenshots. The YouTube player only loads when pressed (site.js), so YouTube sets no cookies until then.
@@ -327,7 +335,22 @@ def game_page(g):
             src_items.append(f'<li><a href="{e(m.group(1))}" target="_blank" rel="noopener">{e(label)}</a></li>')
     sources = f'<div class="sources"><strong>Sources · checked {updated}</strong><ul>{"".join(src_items)}</ul></div>' if src_items else ""
 
-    body = head + verdict + facts_html + played + media_html + notes + perf + reviews + buy + signup("game") + sources + "</section>"
+    # FAQ schema mirrors answers already visible on the page (no hidden text).
+    qas = [(f"Is {name} a game-key card or a full cartridge?", f"{cart}. {cart_note}")]
+    if g.get("Verdict") or g.get("We played it"):
+        qas.append((worth_q, " ".join(x for x in (g.get("Verdict headline"), g.get("Verdict"), g.get("We played it")) if x)))
+    if g.get("Performance"):
+        qas.append((f"How does {name} run on Switch 2?", "; ".join(g["Performance"].splitlines())))
+    if is_edition and g.get("Upgrade path"):
+        up = g.get("Upgrade price USD")
+        qas.append(("How much is the Switch 2 upgrade?",
+                    (f"${up:.2f} in the US" + (", or free with Nintendo Switch Online + Expansion Pack." if "NSO" in g["Upgrade path"] else "."))
+                    if up else g["Upgrade path"] + "."))
+    schema = ('<script type="application/ld+json">' + json.dumps({"@context": "https://schema.org", "@type": "FAQPage",
+              "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in qas]},
+              ensure_ascii=False) + "</script>")
+
+    body = head + facts_html + worth + media_html + notes + perf + reviews + buy + signup("game") + sources + schema + "</section>"
     desc = f"Is {name} a game-key card or a full cartridge on Switch 2? Release date, upgrade path, performance and reviews."
     return page(f"/games/{g['slug']}/", f"{title_name}: game-key card, upgrade and reviews | Nintendo Critic", desc, body,
                 index=bool(g.get("Approved")))
@@ -395,29 +418,89 @@ def compat_page(compat):
                 "Does your Switch 1 game work on Switch 2? Search the games and apps with known problems and fixes.", body, "/compatibility/")
 
 
+def faq_block(qas):
+    """Visible Q&A plus FAQPage schema. qas: [(question, answer_text)]."""
+    items = "".join(f'<h3>{e(q)}</h3><p>{e(a)}</p>' for q, a in qas)
+    schema = {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in qas]}
+    return (f'<div class="panel faq"><h2>Questions people ask</h2>{items}</div>'
+            f'<script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script>')
+
+
+def norm_name(n):
+    return re.sub(r"[^a-z0-9]", "", short_name(n).lower().replace("&", "and"))
+
+
 def upgrades_page(games):
-    eds = [g for g in games if g.get("Game type") == "Switch 2 Edition"]
-    rows = []
-    for g in eds:
-        path = g.get("Upgrade path") or "Not announced"
-        if g.get("Upgrade price USD"):
-            path += f', about ${g["Upgrade price USD"]:g} USD'
-        what = g.get("Performance") or g.get("Notes") or ""
-        if g.get("Release date") and g["Release date"] > TODAY.isoformat():
-            what = (what.rstrip(".") + ". " if what else "") + f'Out {fmt_date(g["Release date"], False)}.'
-        rows.append(f'<tr><td><span class="with-thumb">{cover(g, "t_cover_small", 90, 120, "thumb")}'
-                    f'<strong>{game_link(dict(g, Name=short_name(g["Name"])))}</strong></span></td><td>{e(path)}</td><td>{e(what)}</td></tr>')
-    body = f'''<section aria-labelledby="u-title">
-<div class="eyebrow">Switch 2 Editions and upgrades · Updated {TODAY.strftime("%b %Y")}</div>
-<h1 id="u-title">Switch 2 upgrades: what they cost and what you get</h1>
-<p class="lede">Some Switch 1 games get a paid Switch 2 Edition upgrade, some get a free update, and some are free with Nintendo Switch Online + Expansion Pack.</p>
-<div class="panel"><div class="scroll"><table>
-<thead><tr><th scope="col">Game</th><th scope="col">If you own the Switch 1 version</th><th scope="col">What improves</th></tr></thead>
-<tbody>{"".join(rows)}</tbody></table></div></div>
-<p class="sub" style="margin-top:12px;color:var(--muted);font-size:14px">Prices in US dollars from Nintendo's announcements.</p>
+    """Every Switch 2 upgrade pack and free upgrade, from data/upgrades.json (checked against two published lists)."""
+    data = json.loads((ROOT / "data" / "upgrades.json").read_text())
+    pages = {norm_name(g["Name"]): g for g in games if g["has_page"]}
+
+    def name_cell(u):
+        g = pages.get(norm_name(u["name"]))
+        n = f'<a href="/games/{g["slug"]}/">{e(u["name"])}</a>' if g else e(u["name"])
+        return n + (' <span class="pill nin">Nintendo</span>' if u.get("nintendo") else "")
+
+    paid = sorted(data["paid"], key=lambda u: (-u["price"], u["name"].lower()))
+    paid_rows = "".join(
+        f'<tr data-q="{e(u["name"].lower())}" data-kind="{"nin" if u.get("nintendo") else "x"}">'
+        f'<td class="game">{name_cell(u)}</td><td class="num">${u["price"]:.2f}</td><td>{e(u.get("note", ""))}</td></tr>'
+        for u in paid)
+    free = sorted(data["free"], key=lambda u: u["name"].lower())
+    free_rows = "".join(f'<tr data-q="{e(u["name"].lower())}" data-kind="free"><td class="game">{name_cell(u)}</td>'
+                        f'<td class="num">Free</td><td></td></tr>' for u in free)
+    nin_free = ", ".join(data["nintendo_free_updates"])
+    coming = "".join(f'<li><strong>{e(c["name"])}</strong>: {e(c["note"])}</li>' for c in data.get("coming", []))
+    nin_paid = [u for u in paid if u.get("nintendo")]
+    cheapest = min(u["price"] for u in paid)
+    dearest = max(u["price"] for u in paid)
+    checked = fmt_date(data["checked"])
+    srcs = "".join(f'<li><a href="{e(x["url"])}" target="_blank" rel="noopener">{e(x["title"])}</a></li>' for x in data["sources"])
+    qas = [
+        ("How do Switch 2 upgrade packs work?",
+         "If you own the Switch 1 version of a game, an upgrade pack unlocks its Switch 2 version, usually with better "
+         "resolution and frame rate and sometimes new content. You buy it on the Nintendo eShop and keep your save. "
+         "If you don't own the game yet, you can buy the Switch 2 Edition outright instead."),
+        ("Are Switch 2 upgrades free?",
+         f"Many are. {len(free)} games on this list upgrade for free, and Nintendo gave {len(data['nintendo_free_updates'])} "
+         f"of its own Switch 1 games free Switch 2 updates. The other {len(paid)} cost between ${cheapest:.2f} and ${dearest:.2f}."),
+        ("Which Switch 2 upgrades are free with Nintendo Switch Online?",
+         "The Switch 2 Editions of The Legend of Zelda: Breath of the Wild and Tears of the Kingdom are included with "
+         "Nintendo Switch Online + Expansion Pack. Without it, each costs $9.99."),
+        ("How much are Nintendo's Switch 2 upgrade packs?",
+         "; ".join(f'{short_name(u["name"])} ${u["price"]:.2f}' for u in nin_paid) + "."),
+    ]
+    body = f'''<section aria-labelledby="u-title" data-filterable>
+<div class="eyebrow">Switch 2 Editions and upgrade packs · Prices checked {checked}</div>
+<h1 id="u-title">Switch 2 upgrade packs: every price, plus the free upgrades</h1>
+<p class="lede">Own a Switch 1 game? Here's what it costs to get its Switch 2 version: {len(paid)} paid upgrade packs from
+${cheapest:.2f} to ${dearest:.2f}, and {len(free)} games that upgrade for free.</p>
+<div class="controls" role="search">
+  <label for="q" class="eyebrow" style="flex-basis:100%">Search upgrades</label>
+  <input id="q" type="search" placeholder="Try a game" autocomplete="off">
+  <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
+  <button type="button" class="chip" data-filter="nin" aria-pressed="false">Nintendo</button>
+  <button type="button" class="chip" data-filter="free" aria-pressed="false">Free</button>
+</div>
+<div class="table-wrap">
+  <table class="list"><thead><tr><th scope="col">Game</th><th scope="col">Upgrade price (US)</th><th scope="col">What you get</th></tr></thead>
+  <tbody>{paid_rows}{free_rows}</tbody></table>
+  <div class="empty" hidden>No games match. Try a shorter search.</div>
+</div>
+<div class="count">{len(paid)} paid upgrade packs · {len(free)} free upgrades<span data-count></span></div>
+<div class="panel"><h2>Free Switch 2 updates for Nintendo's own games</h2>
+<p>These Switch 1 games got a free update that improves them on Switch 2, such as sharper resolution, a steadier frame
+rate or HDR, depending on the game: {e(nin_free)}.</p>
+<p class="sub">Most other Switch 1 games run on Switch 2 without any update. See <a href="/compatibility/">the compatibility list</a> for the exceptions.</p></div>
+{"<div class=\"panel\"><h2>Coming soon</h2><ul>" + coming + "</ul></div>" if coming else ""}
+{faq_block(qas)}
+<div class="sources"><strong>Sources · prices checked {checked}</strong><ul>{srcs}</ul>
+<p class="sub">US eShop prices; they can differ by region and during sales.</p></div>
+{signup("upgrades")}
 </section>'''
-    return page("/upgrades/", "Switch 2 Edition upgrades: prices and what you get | Nintendo Critic",
-                "Every Switch 2 Edition and upgrade pack: what it costs if you own the Switch 1 version and what improves.", body, "/upgrades/")
+    return page("/upgrades/", "Switch 2 upgrade pack prices: every paid and free upgrade | Nintendo Critic",
+                f"Every Switch 2 upgrade pack price ({len(paid)} paid, {len(free)} free), which upgrades are free with "
+                "Nintendo Switch Online, and what each Switch 2 Edition adds.", body, "/upgrades/")
 
 
 def upcoming(games):
