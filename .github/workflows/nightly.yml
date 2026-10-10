@@ -1,0 +1,27 @@
+name: Nightly data sync
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # 09:17 UTC daily (early morning in North America)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview changes without writing to Airtable"
+        type: boolean
+        default: false
+
+jobs:
+  igdb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sync Switch 2 releases from IGDB
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+        run: python3 collector/igdb_sync.py ${{ inputs.dry_run && '--dry-run' || '' }}
