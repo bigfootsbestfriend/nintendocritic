@@ -26,35 +26,50 @@ def vague_note(human):
     return f"{human} (IGDB, no exact date)"
 
 
-def fetch_releases(igdb, start, end):
-    games = {}
-    offset = 0
+RELEASE_FIELDS = ("fields date,date_format,human,release_region,game.id,game.name,game.game_type,game.version_parent,"
+                  f"game.involved_companies.company.name,game.involved_companies.publisher,{FIELDS};")
+
+
+def _paged(igdb, where):
+    offset, out = 0, []
     while True:
-        rows = igdb.query("release_dates", (
-            "fields date,date_format,human,release_region,game.id,game.name,game.game_type,game.version_parent,"
-            f"game.involved_companies.company.name,game.involved_companies.publisher,{FIELDS};"
-            f" where platform = {IGDB_SWITCH2} & date >= {int(start.timestamp())} & date < {int(end.timestamp())};"
-            f" sort id asc; limit 500; offset {offset};"))  # stable order, or paging skips rows
-        for r in rows:
-            g = r.get("game") or {}
-            if not g.get("name") or g.get("version_parent") or g.get("game_type", 0) not in KEEP_TYPES:
-                continue  # skip DLC, bundles, deluxe/digital editions
-            if not is_worth_a_page(g):
-                continue  # eShop filler
-            # date_format 0 is an exact day; anything else ("Nov 2026", "2026", "Q4 2026") is stored
-            # by IGDB as the last day of that period, so keep only the human text for those.
-            exact = r.get("date_format", 0) == 0
-            day = dt.datetime.fromtimestamp(r["date"], dt.timezone.utc).date().isoformat() if exact else None
-            pubs = [c["company"]["name"] for c in g.get("involved_companies", []) if c.get("publisher")]
-            # Prefer the North American or worldwide date (our readers), then any exact date, then earliest.
-            rank = (0 if r.get("release_region") in NA_REGIONS else 1, 0 if day else 1, day or "9999")
-            cur = games.get(g["id"])
-            if not cur or rank < cur["rank"]:
-                games[g["id"]] = {"id": g["id"], "name": g["name"], "date": day, "rank": rank,
-                                  "human": r.get("human", ""), "publisher": ", ".join(pubs)}
+        # Stable sort, or IGDB paging repeats and skips rows.
+        rows = igdb.query("release_dates", f"{RELEASE_FIELDS} where {where}; sort id asc; limit 500; offset {offset};")
+        out += rows
         if len(rows) < 500:
-            return list(games.values())
+            return out
         offset += 500
+
+
+def fetch_releases(igdb, start, end):
+    # Pass 1: which games have a Switch 2 release inside the window.
+    in_window = _paged(igdb, f"platform = {IGDB_SWITCH2} & date >= {int(start.timestamp())} & date < {int(end.timestamp())}")
+    ids = sorted({r["game"]["id"] for r in in_window if r.get("game")})
+    # Pass 2: every Switch 2 release date for those games, so the North American date is
+    # picked even when it falls outside the window (otherwise dates flip between nightly runs).
+    rows = []
+    for i in range(0, len(ids), 200):
+        rows += _paged(igdb, f"platform = {IGDB_SWITCH2} & game = ({','.join(map(str, ids[i:i + 200]))})")
+
+    games = {}
+    for r in rows:
+        g = r.get("game") or {}
+        if not g.get("name") or g.get("version_parent") or g.get("game_type", 0) not in KEEP_TYPES:
+            continue  # skip DLC, bundles, deluxe/digital editions
+        if not is_worth_a_page(g):
+            continue  # eShop filler
+        # date_format 0 is an exact day; anything else ("Nov 2026", "2026", "Q4 2026") is stored
+        # by IGDB as the last day of that period, so keep only the human text for those.
+        exact = r.get("date_format", 0) == 0 and r.get("date")
+        day = dt.datetime.fromtimestamp(r["date"], dt.timezone.utc).date().isoformat() if exact else None
+        pubs = [c["company"]["name"] for c in g.get("involved_companies", []) if c.get("publisher")]
+        # Prefer the North American or worldwide date (our readers), then any exact date, then earliest.
+        rank = (0 if r.get("release_region") in NA_REGIONS else 1, 0 if day else 1, r.get("date") or 10**12, r["id"])
+        cur = games.get(g["id"])
+        if not cur or rank < cur["rank"]:
+            games[g["id"]] = {"id": g["id"], "name": g["name"], "date": day, "rank": rank,
+                              "human": r.get("human", ""), "publisher": ", ".join(pubs)}
+    return list(games.values())
 
 
 def main():
@@ -136,12 +151,15 @@ def main():
         untouched = lambda f: (f.get("Status") == "Draft" and not f.get("Approved") and not f.get("Verdict")
                                and not f.get("We played it") and not f.get("Notes")
                                and (f.get("Sources") or "").startswith("https://www.igdb.com/"))
-        window_start = (now - dt.timedelta(days=args.days_back)).date().isoformat()
+        # Two days' margin so games right on the window edge (time zones, rounding) are never pruned.
+        window_start = (now - dt.timedelta(days=args.days_back - 2)).date().isoformat()
         # Only rows dated inside the window this run fetched; older rows weren't checked, so leave them.
         in_window = lambda f: (f.get("Release date") or "9999") >= window_start
         prune = [r for r in rows if untouched(r["fields"]) and in_window(r["fields"])
                  and r["fields"].get("IGDB ID") not in keep_ids]
         print(f"Pruning {len(prune)} untouched drafts that fail the quality filter")
+        for r in prune:
+            print(f"  - {r['fields'].get('Release date')}  {r['fields'].get('Name')}")
         at.delete(GAMES_TABLE, [r["id"] for r in prune])
 
     at.create(GAMES_TABLE, creates)
