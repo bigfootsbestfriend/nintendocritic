@@ -1,6 +1,6 @@
 # Handoff: where Nintendo Critic stands
 
-Last updated 2026-10-09. To pick this up in a new Claude Code session, open this repo and say:
+Last updated 2026-10-10. To pick this up in a new Claude Code session, open this repo and say:
 **"Read HANDOFF.md and carry on with the next step."**
 
 ## What the site is
@@ -38,6 +38,15 @@ Keyword research (Semrush, US) drove the focus:
   - Full backfill since launch already done: `--days-back 500 --prune`.
 - **GitHub secrets set:** `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, `AIRTABLE_TOKEN`.
 
+## Site generator (built 2026-10-10)
+
+- `generator/build.py` reads Airtable and writes `public/` (gitignored). `.github/workflows/pages.yml` runs it on push and daily at 09:47 UTC.
+- Pages: home, /game-key-cards/, /compatibility/, /upgrades/, /coming-soon/, and /games/<slug>/ for **Approved** games only.
+- `python3 generator/build.py --preview --out /some/dir` also builds pages for "Needs review" games so you can check them locally.
+- **Whole site is noindex** until `LAUNCHED = True` in build.py. Flip it once the data is reviewed and a few games are approved.
+- Signup boxes appear once `KIT_FORM_URL` is set.
+- Optional Games fields the page uses if present: `We played it`, `Download size GB`, plus `Score` on Reviews.
+
 ## Waiting on Mike
 
 1. **A second, free Kit account** just for Nintendo Critic, separate from the Kitchen Magpie account so it doesn't inflate those numbers.
@@ -52,8 +61,6 @@ Keyword research (Semrush, US) drove the focus:
    - the compatibility list (status changes go to the Change log)
    - store listings: the game-key card badge → Cartridge confidence "Store badge", plus download size
 2. **Review feeds:** RSS from Nintendo Life, Nintendo World Report and Nintendo Everything → the Reviews table (link and score only, summaries written in our own words).
-3. **Site generator:** Airtable → static pages in the mockup's design → GitHub Pages, then the Namecheap DNS records.
-   - Only Approved games get pages; the hub lists can show drafts.
 4. **Scheduled Claude Code task** (runs on the Max plan, no API key): drafts verdicts and review summaries, and the weekly email draft in the new Kit account. Mike presses Send.
 
 ## Running locally
