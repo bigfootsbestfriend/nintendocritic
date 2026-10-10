@@ -25,3 +25,7 @@ jobs:
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
         run: python3 collector/igdb_sync.py ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Add new Switch 2 reviews from outlet RSS feeds
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+        run: python3 collector/reviews_sync.py ${{ inputs.dry_run && '--dry-run' || '' }}

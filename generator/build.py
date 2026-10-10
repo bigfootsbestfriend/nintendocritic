@@ -309,15 +309,19 @@ def game_page(g):
                       + (' The trailer plays from YouTube when you press play.' if g["trailer"] else "") + '</p></div>')
 
     q = urllib.parse.quote(name.lower())
+    revs = sorted((r for r in g["reviews"] if r.get("URL")), key=lambda r: r.get("Outlet", ""))
+    has_score = any(r.get("Score") for r in revs)
     rev_rows = "".join(
         f'<tr><td><a href="{e(r["URL"])}" target="_blank" rel="noopener">{e(r.get("Outlet", "Review"))}</a></td>'
-        f'<td>{e(r.get("Played on", "—"))}</td><td class="num">{e(str(r.get("Score", "—")))}</td><td>{e(r.get("Summary", ""))}</td></tr>'
-        for r in g["reviews"] if r.get("URL"))
+        + (f'<td class="num">{e(str(r.get("Score", "—")))}</td>' if has_score else "")
+        + f'<td>{e(r["Summary"]) if r.get("Summary") else "<a href=" + chr(34) + e(r["URL"]) + chr(34) + " target=_blank rel=noopener>Read the review ↗</a>"}</td></tr>'
+        for r in revs)
     reviews = '<div class="panel"><h2>What the reviews say</h2>'
     if rev_rows:
         reviews += ('<p class="sub">Reviews of the Switch 2 version, summarised in our own words. Follow the links for the full reviews.</p>'
-                    '<div class="scroll"><table><thead><tr><th scope="col">Outlet</th><th scope="col">Played on</th><th scope="col">Score</th>'
-                    f'<th scope="col">In short</th></tr></thead><tbody>{rev_rows}</tbody></table></div>')
+                    '<div class="scroll"><table><thead><tr><th scope="col">Outlet</th>'
+                    + ('<th scope="col">Score</th>' if has_score else "")
+                    + f'<th scope="col">In short</th></tr></thead><tbody>{rev_rows}</tbody></table></div>')
     else:
         reviews += '<p class="sub">No Switch 2 reviews yet. We add them as they\'re published.</p>'
     reviews += (f'<p class="sub" style="margin:12px 0 0">Overall scores: <a href="https://www.metacritic.com/search/{q}/" target="_blank" rel="noopener">Metacritic</a>'
