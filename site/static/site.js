@@ -39,3 +39,46 @@ document.querySelectorAll("[data-filterable]").forEach(box => {
     render();
   }));
 });
+
+// Trailer: swap the thumbnail for YouTube's player only when pressed.
+document.querySelectorAll("[data-yt]").forEach(btn => btn.addEventListener("click", () => {
+  const f = document.createElement("iframe");
+  f.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(btn.dataset.yt)}?autoplay=1&rel=0`;
+  f.title = btn.getAttribute("aria-label");
+  f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+  f.allowFullscreen = true;
+  btn.replaceWith(f);
+}));
+
+// Homepage search: answers "what's in the box?" right in the results, from /static/games.json.
+document.querySelectorAll("[data-finder]").forEach(box => {
+  const input = box.querySelector("[data-find]");
+  const out = box.querySelector("[data-results]");
+  const LABEL = { full: "Full cartridge", gkc: "Game-key card", code: "Code in a box", tba: "Not announced" };
+  const ICON = JSON.parse(document.getElementById("cart-icons")?.textContent || "{}");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const norm = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g, "");
+  const date = d => d ? new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Date TBA";
+  let games = null;
+  const load = () => games || (games = fetch("/static/games.json").then(r => r.json()).then(list => list.map(g => ({ ...g, k: norm(g.n) }))));
+  input.addEventListener("focus", load, { once: true });
+  input.addEventListener("input", async () => {
+    const q = norm(input.value.trim());
+    if (q.length < 2) { out.hidden = true; return; }
+    const list = await load();
+    const words = q.split(" ").filter(Boolean);
+    const hits = list.filter(g => words.every(w => g.k.includes(w)))
+      .sort((a, b) => (b.k.startsWith(q) - a.k.startsWith(q)) || (b.c !== "tba") - (a.c !== "tba")).slice(0, 8);
+    out.innerHTML = hits.length ? hits.map(g => {
+      const thumb = g.i ? `<img class="thumb" src="https://images.igdb.com/igdb/image/upload/t_cover_small/${g.i}.jpg" alt="" loading="lazy">`
+                        : `<span class="thumb cover-ph"></span>`;
+      const icon = ICON[g.c] ? `<svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">${ICON[g.c]}</svg>` : "";
+      const inner = `${thumb}<span class="rt">${esc(g.n)}<small>${esc(date(g.d))}${g.p ? " · " + esc(g.p) : ""}</small></span>` +
+                    `<span class="pill ${g.c} has-ico">${icon}${LABEL[g.c]}</span>`;
+      return g.s ? `<a class="r" href="/games/${g.s}/">${inner}</a>` : `<div class="r">${inner}</div>`;
+    }).join("") : `<div class="none">No Switch 2 game matches that yet. Try a shorter name.</div>`;
+    out.hidden = false;
+  });
+  document.addEventListener("click", ev => { if (!box.contains(ev.target)) out.hidden = true; });
+  input.addEventListener("keydown", ev => { if (ev.key === "Escape") out.hidden = true; });
+});

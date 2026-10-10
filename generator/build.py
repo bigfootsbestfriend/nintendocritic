@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "collector"))
 from common import COMPAT_TABLE, GAMES_TABLE, REVIEWS_TABLE, Airtable, load_env  # noqa: E402
+import media  # noqa: E402
 
 # Flip to True when the data has been reviewed and the site should appear in search results.
 LAUNCHED = False
@@ -33,7 +34,6 @@ NAV = [
     ("/upgrades/", "Upgrades"),
     ("/coming-soon/", "Coming soon"),
 ]
-CART_CLASS = {"Full cartridge": "full", "Game-key card": "gkc", "Code in a box": "code"}
 COMPAT_CLASS = {"Not compatible": "bad", "Partly compatible": "bad", "Partly": "bad",
                 "Issues reported": "warn", "Fixed": "full", "Works": "full"}
 LOGO = ('<svg viewBox="0 0 48 56" aria-hidden="true"><path d="M8 2H32.5L44 13.5V50Q44 54 40 54H8Q4 54 4 50V6Q4 2 8 2Z" fill="var(--accent)"/>'
@@ -75,6 +75,42 @@ def pub_small(g):
 
 def pill(text, cls):
     return f'<span class="pill {cls}">{e(text)}</span>'
+
+
+# Small icons for what's in the box, so a list can be scanned without reading every label.
+_CART = "M6 2.5h8.5l4.5 4.5v13a1.5 1.5 0 0 1-1.5 1.5h-11.5a1.5 1.5 0 0 1-1.5-1.5v-16a1.5 1.5 0 0 1 1.5-1.5z"
+ICONS = {
+    "full": f'<path d="{_CART}" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.6"/>'
+            '<path d="M8.5 12.5l2.4 2.4 4.6-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    "gkc": f'<path d="{_CART}" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+           '<circle cx="9.5" cy="12.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/>'
+           '<path d="M11.8 12.5h4.4M14.6 12.5v2.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+    "code": '<rect x="3.5" y="4.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+            '<path d="M7 10h10M7 14h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+    "tba": f'<path d="{_CART}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.6 2"/>'
+           '<path d="M10 10.2a2.2 2.2 0 1 1 3 2c-.7.3-1 .8-1 1.5v.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>'
+           '<circle cx="12" cy="17.2" r="1" fill="currentColor"/>',
+}
+CART_KIND = {"Full cartridge": "full", "Game-key card": "gkc", "Code in a box": "code"}
+
+
+def icon(kind, size=18):
+    return f'<svg class="ico" viewBox="0 0 24 24" width="{size}" height="{size}" aria-hidden="true">{ICONS[kind]}</svg>'
+
+
+def badge(cart):
+    """Cartridge-type pill with its icon. Unknown types show as 'Not announced'."""
+    cart = cart if cart in CART_KIND else "Not announced"
+    kind = CART_KIND.get(cart, "tba")
+    return f'<span class="pill {kind} has-ico">{icon(kind, 16)}{e(cart)}</span>'
+
+
+def cover(g, size="t_cover_big", w=264, h=352, cls="cover"):
+    """Box art from IGDB, or a branded placeholder card with the game's name when there's none."""
+    if g.get("cover"):
+        return (f'<img class="{cls}" src="{media.img(g["cover"], size)}" width="{w}" height="{h}" '
+                f'alt="{e(short_name(g["Name"]))} box art" loading="lazy" decoding="async">')
+    return f'<span class="{cls} cover-ph" aria-hidden="true"><span>{e(short_name(g["Name"]))}</span></span>'
 
 
 def signup(uid):
@@ -140,12 +176,31 @@ def load(preview):
         g["reviews"] = [r for r in reviews if g["id"] in r.get("Game", [])]
     games = [g for g in games if g.get("Name")]
     games.sort(key=lambda g: g["Name"].lower())
+    art = media.fetch(g.get("IGDB ID") for g in games)
+    for g in games:
+        m = art.get(int(g["IGDB ID"])) if g.get("IGDB ID") else None
+        g["cover"] = (m or {}).get("cover")
+        g["shots"] = (m or {}).get("shots", [])
+        g["art"] = (m or {}).get("art", [])
+        g["videos"] = (m or {}).get("videos", [])
+        g["trailer"] = None
+        if g["has_page"]:  # only game pages show trailers, so only check those with YouTube
+            g["trailer"] = next((v for v in media.trailer_candidates(g["videos"])[:3] if media.playable(v)), None)
     return games, compat
 
 
 def game_link(g):
     name = e(g["Name"])
     return f'<a href="/games/{g["slug"]}/">{name}</a>' if g["has_page"] else name
+
+
+def game_card(g):
+    """Box-art card for grids: cover, release date, name, publisher and what's in the box."""
+    d = fmt_date(g["Release date"], False) if g.get("Release date") else "TBA"
+    tag, href = ("a", f' href="/games/{g["slug"]}/"') if g["has_page"] else ("div", "")
+    return (f'<{tag} class="gcard"{href} data-q="{e((g["Name"] + " " + g.get("Publisher", "")).lower())}" data-kind="x">'
+            f'<span class="art">{cover(g, "t_cover_big", 264, 352)}<span class="date">{d}</span></span>'
+            f'<span class="t">{e(short_name(g["Name"]))}</span>{pub_small(g)}{badge(g.get("Cartridge"))}</{tag}>')
 
 
 # ---------- pages ----------
@@ -157,14 +212,19 @@ def game_page(g):
     title_name = g["Name"] if is_edition else f"{name} on Switch 2"
     updated = TODAY.strftime("%b %Y")
 
+    # Key art (or a screenshot) as a dimmed banner behind the header; the box art sits inside the cartridge.
+    banner = g["art"][0] if g["art"] else (g["shots"][0] if g["shots"] else None)
+    banner_style = f' style="--banner:url({media.img(banner, "t_1080p")})"' if banner else ""
+    label = (f'<img src="{media.img(g["cover"], "t_cover_big")}" width="264" height="352" alt="{e(name)} box art">'
+             if g["cover"] else f'<small>SWITCH 2</small><b>{e(name)}</b>')
     head = f'''<section aria-labelledby="g-title">
-<div class="game-head">
-  <div class="cart" aria-hidden="true"><div class="label"><small>SWITCH 2</small><b>{e(name)}</b></div><div class="pins"></div></div>
+<div class="game-head{" has-banner" if banner else ""}"{banner_style}>
+  <div class="cart{" has-cover" if g["cover"] else ""}"><div class="label">{label}</div><div class="pins" aria-hidden="true"></div></div>
   <div>
     <div class="eyebrow">Switch 2 game check{" · " + e(g["Publisher"]) if g.get("Publisher") else ""} · Updated {updated}</div>
     <h1 id="g-title">{e(title_name)}</h1>
     <p class="lede">Is it a full cartridge? Does it run better? Should you buy it again? Everything to know before you buy.</p>
-    <p style="margin:14px 0 0">{pill(cart, CART_CLASS.get(cart, "code"))}</p>
+    <p style="margin:14px 0 0">{badge(cart)}</p>
   </div>
 </div>'''
 
@@ -193,9 +253,14 @@ def game_page(g):
                       f"About ${price:g} USD." if price else "Price not confirmed yet." if v == "Paid upgrade pack" else ""))
     if g.get("Download size GB"):
         facts.append(("Download size", f'{g["Download size GB"]:g} GB', "From the Nintendo eShop listing. Over about 20 GB, you'll likely want a microSD Express card."))
-    facts_html = '<div class="facts">' + "".join(
-        f'<div class="fact"><span class="k">{e(k)}</span><span class="v">{e(v)}</span>{f"<p class=\"n\">{e(n)}</p>" if n else ""}</div>'
-        for k, v, n in facts) + "</div>"
+    kind = CART_KIND.get(cart, "tba")
+    fact_cards = []
+    for i, (k, v, n) in enumerate(facts):
+        # The first fact is always what's in the box: it gets the cartridge icon and its type's colour.
+        cls, ico = (f"fact box {kind}", icon(kind, 30)) if i == 0 else ("fact", "")
+        note = f'<p class="n">{e(n)}</p>' if n else ""
+        fact_cards.append(f'<div class="{cls}"><span class="k">{e(k)}</span><span class="v">{ico}{e(v)}</span>{note}</div>')
+    facts_html = '<div class="facts">' + "".join(fact_cards) + "</div>"
 
     played = ""
     if g.get("We played it"):
@@ -215,6 +280,25 @@ def game_page(g):
                 rows.append(f'<tr><td colspan="3">{e(line)}</td></tr>')
         perf = ('<div class="panel"><h2>Performance on Switch 2</h2><table><thead><tr><th scope="col">Mode</th>'
                 '<th scope="col">Resolution</th><th scope="col">Frame rate</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>")
+
+    # Trailer + screenshots. The YouTube player only loads when pressed (site.js), so YouTube sets no cookies until then.
+    media_html = ""
+    if g["trailer"] or g["shots"]:
+        parts = []
+        if g["trailer"]:
+            parts.append(f'<button class="yt" type="button" data-yt="{e(g["trailer"])}" aria-label="Play the {e(name)} trailer">'
+                         f'<img src="https://i.ytimg.com/vi/{e(g["trailer"])}/hqdefault.jpg" width="480" height="360" alt="" loading="lazy">'
+                         '<span class="yt-play" aria-hidden="true"></span></button>')
+        if g["shots"]:
+            shots = g["shots"][:6]
+            parts.append('<div class="shots">' + "".join(
+                f'<a href="{media.img(s, "t_1080p")}" target="_blank" rel="noopener" aria-label="{e(name)} screenshot {i} of {len(shots)}">'
+                f'<img src="{media.img(s, "t_screenshot_med")}" width="569" height="320" alt="" loading="lazy"></a>'
+                for i, s in enumerate(shots, 1)) + "</div>")
+        what = "Trailer and screenshots" if g["trailer"] and g["shots"] else "Trailer" if g["trailer"] else "Screenshots"
+        media_html = (f'<div class="panel media"><h2>{what}</h2>' + "".join(parts)
+                      + '<p class="sub" style="margin:10px 0 0">Images via IGDB.'
+                      + (' The trailer plays from YouTube when you press play.' if g["trailer"] else "") + '</p></div>')
 
     q = urllib.parse.quote(name.lower())
     rev_rows = "".join(
@@ -243,28 +327,29 @@ def game_page(g):
             src_items.append(f'<li><a href="{e(m.group(1))}" target="_blank" rel="noopener">{e(label)}</a></li>')
     sources = f'<div class="sources"><strong>Sources · checked {updated}</strong><ul>{"".join(src_items)}</ul></div>' if src_items else ""
 
-    body = head + verdict + facts_html + played + notes + perf + reviews + buy + signup("game") + sources + "</section>"
+    body = head + verdict + facts_html + played + media_html + notes + perf + reviews + buy + signup("game") + sources + "</section>"
     desc = f"Is {name} a game-key card or a full cartridge on Switch 2? Release date, upgrade path, performance and reviews."
     return page(f"/games/{g['slug']}/", f"{title_name}: game-key card, upgrade and reviews | Nintendo Critic", desc, body,
                 index=bool(g.get("Approved")))
 
 
 def keycards_page(games):
-    known = [g for g in games if g.get("Cartridge") in CART_CLASS]
+    known = [g for g in games if g.get("Cartridge") in CART_KIND]
     pending = sum(1 for g in games if g.get("Cartridge") == "Not announced")
     rows = "".join(
-        f'<tr data-q="{e((g["Name"] + " " + g.get("Publisher", "")).lower())}" data-kind="{CART_CLASS[g["Cartridge"]]}">'
-        f'<td class="game">{game_link(g)}</td><td class="pub">{e(g.get("Publisher", ""))}</td>'
-        f'<td>{pill(g["Cartridge"], CART_CLASS[g["Cartridge"]])}</td><td>{amz_link(g["Name"])}</td></tr>' for g in known)
+        f'<tr data-q="{e((g["Name"] + " " + g.get("Publisher", "")).lower())}" data-kind="{CART_KIND[g["Cartridge"]]}">'
+        f'<td class="game"><span class="with-thumb">{cover(g, "t_cover_small", 90, 120, "thumb")}{game_link(g)}</span></td>'
+        f'<td class="pub">{e(g.get("Publisher", ""))}</td>'
+        f'<td>{badge(g["Cartridge"])}</td><td>{amz_link(g["Name"])}</td></tr>' for g in known)
     gkc = sum(1 for g in known if g["Cartridge"] == "Game-key card")
     body = f'''<section aria-labelledby="k-title" data-filterable>
 <div class="eyebrow">Switch 2 buyer's guide · Updated {TODAY.strftime("%b %Y")}</div>
 <h1 id="k-title">Every Switch 2 game-key card</h1>
 <p class="lede">Some boxed Switch 2 games don't have the game on the cartridge. Search any game to see what you're actually buying.</p>
 <div class="explainer">
-  <div>{pill("Full cartridge", "full")}<p>The whole game is on the cart. Plays straight away, no download, and you can resell it.</p></div>
-  <div>{pill("Game-key card", "gkc")}<p>The cart is a key. You download the game first, and the cart must be inserted to play.</p></div>
-  <div>{pill("Code in a box", "code")}<p>No cartridge at all, just a download code. Can't be resold.</p></div>
+  <div class="ex full">{icon("full", 40)}{badge("Full cartridge")}<p>The whole game is on the cart. Plays straight away, no download, and you can resell it.</p></div>
+  <div class="ex gkc">{icon("gkc", 40)}{badge("Game-key card")}<p>The cart is a key. You download the game first, and the cart must be inserted to play.</p></div>
+  <div class="ex code">{icon("code", 40)}{badge("Code in a box")}<p>No cartridge at all, just a download code. Can't be resold.</p></div>
 </div>
 <div class="controls" role="search">
   <label for="q" class="eyebrow" style="flex-basis:100%">Search games</label>
@@ -319,8 +404,9 @@ def upgrades_page(games):
             path += f', about ${g["Upgrade price USD"]:g} USD'
         what = g.get("Performance") or g.get("Notes") or ""
         if g.get("Release date") and g["Release date"] > TODAY.isoformat():
-            what = (what + " " if what else "") + f'Out {fmt_date(g["Release date"], False)}.'
-        rows.append(f'<tr><td><strong>{game_link(dict(g, Name=short_name(g["Name"])))}</strong></td><td>{e(path)}</td><td>{e(what)}</td></tr>')
+            what = (what.rstrip(".") + ". " if what else "") + f'Out {fmt_date(g["Release date"], False)}.'
+        rows.append(f'<tr><td><span class="with-thumb">{cover(g, "t_cover_small", 90, 120, "thumb")}'
+                    f'<strong>{game_link(dict(g, Name=short_name(g["Name"])))}</strong></span></td><td>{e(path)}</td><td>{e(what)}</td></tr>')
     body = f'''<section aria-labelledby="u-title">
 <div class="eyebrow">Switch 2 Editions and upgrades · Updated {TODAY.strftime("%b %Y")}</div>
 <h1 id="u-title">Switch 2 upgrades: what they cost and what you get</h1>
@@ -349,14 +435,9 @@ def radar_page(games):
         months["Date to be announced"] = tba
     out = []
     for m, gs in months.items():
-        out.append(f'<div class="month"><h2>{m}</h2>')
-        for g in gs:
-            d = fmt_date(g["Release date"], False) if g.get("Release date") else "TBA"
-            cart = g.get("Cartridge") or "Not announced"
-            out.append(f'<div class="rel" data-q="{e(g["Name"].lower())}" data-kind="x"><span class="d">{d}</span>'
-                       f'<span class="t">{game_link(g)}{pub_small(g)}</span>'
-                       f'{pill(cart, CART_CLASS.get(cart, "code"))}</div>')
-        out.append("</div>")
+        out.append(f'<div class="month"><h2>{m} <small>{len(gs)} game{"s" if len(gs) != 1 else ""}</small></h2><div class="grid">')
+        out += [game_card(g) for g in gs]
+        out.append("</div></div>")
     body = f'''<section aria-labelledby="r-title" data-filterable>
 <div class="eyebrow">Release radar · Updated {fmt_date(TODAY.isoformat())}</div>
 <h1 id="r-title">Upcoming Switch 2 games</h1>
@@ -374,25 +455,55 @@ def radar_page(games):
                 "Every upcoming Switch 2 game with its release date and whether it's a full cartridge or game-key card.", body, "/coming-soon/")
 
 
+HUB_ICONS = {
+    "compat": '<path d="M4 8h12l-3-3M20 16H8l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    "up": '<path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+          '<path d="M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    "cal": '<rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+           '<path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+           '<rect x="7" y="13" width="3" height="3" rx=".6" fill="currentColor"/>',
+}
+
+
+def hub_icon(name):
+    return f'<svg class="ico" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">{HUB_ICONS[name]}</svg>'
+
+
+def search_index(games):
+    """Every game for the homepage search: name, page slug (if it has one), box type, date, cover."""
+    return json.dumps([{"n": g["Name"], "p": g.get("Publisher", ""), "s": g["slug"] if g["has_page"] else "",
+                        "c": CART_KIND.get(g.get("Cartridge"), "tba"), "d": g.get("Release date", ""), "i": g.get("cover") or ""}
+                       for g in games], separators=(",", ":"))
+
+
 def home_page(games, compat):
-    gkc = sum(1 for g in games if g.get("Cartridge") == "Game-key card")
+    count = {k: sum(1 for g in games if CART_KIND.get(g.get("Cartridge"), "tba") == k) for k in ("gkc", "full", "code", "tba")}
     eds = sum(1 for g in games if g.get("Game type") == "Switch 2 Edition")
-    soon = upcoming(games)[:6]
-    rel = "".join(
-        f'<div class="rel"><span class="d">{fmt_date(g["Release date"], False)}</span><span class="t">{game_link(g)}'
-        f'{pub_small(g)}</span>'
-        f'{pill(g.get("Cartridge") or "Not announced", CART_CLASS.get(g.get("Cartridge"), "code"))}</div>' for g in soon)
+    strip = "".join(game_card(g) for g in upcoming(games)[:12])
     body = f'''<section aria-labelledby="h-title">
-<div class="eyebrow">The Switch 2 game checker</div>
-<h1 id="h-title">Know what you're buying on Switch 2</h1>
-<p class="lede">Game-key card or full cartridge? Does your Switch 1 game work? Is the upgrade worth it? Checked daily across {len(games)} Switch 2 games.</p>
-<div class="hubs">
-  <a href="/game-key-cards/"><b>Game-key cards</b><span>{gkc} confirmed so far. Which boxed games make you download first.</span></a>
-  <a href="/compatibility/"><b>Switch 1 compatibility</b><span>The {len(compat)} games and apps with known problems on Switch 2.</span></a>
-  <a href="/upgrades/"><b>Switch 2 Editions</b><span>{eds} upgrades: what they cost and what improves.</span></a>
-  <a href="/coming-soon/"><b>Coming soon</b><span>Every upcoming Switch 2 release, with dates.</span></a>
+<div class="hero">
+  <div class="eyebrow">The Switch 2 game checker</div>
+  <h1 id="h-title">Is it a game-key card?</h1>
+  <p class="lede">Search any Switch 2 game to see what's really in the box, before you buy. Checked daily across {len(games)} games.</p>
+  <div class="finder" data-finder>
+    <label for="find" class="sr">Search Switch 2 games</label>
+    <input id="find" type="search" placeholder="Type a game, e.g. Mario Kart World" autocomplete="off" data-find>
+    <div class="results" data-results hidden></div>
+    <script type="application/json" id="cart-icons">{json.dumps(ICONS).replace("</", "<\\/")}</script>
+  </div>
+  <div class="stats">
+    <a class="stat gkc" href="/game-key-cards/">{icon("gkc", 34)}<b>{count["gkc"]}</b><span>game-key cards</span></a>
+    <a class="stat full" href="/game-key-cards/">{icon("full", 34)}<b>{count["full"]}</b><span>full cartridges</span></a>
+    <a class="stat tba" href="/coming-soon/">{icon("tba", 34)}<b>{count["tba"]}</b><span>not announced yet</span></a>
+  </div>
 </div>
-<div class="month"><h2>Next up</h2>{rel}<p><a href="/coming-soon/">All upcoming games →</a></p></div>
+<div class="month"><h2>Next up <a class="more" href="/coming-soon/">All upcoming games →</a></h2><div class="strip">{strip}</div></div>
+<div class="hubs">
+  <a href="/game-key-cards/">{icon("gkc", 34)}<b>Game-key cards</b><span>Which boxed games make you download first.</span></a>
+  <a href="/compatibility/">{hub_icon("compat")}<b>Switch 1 compatibility</b><span>The {len(compat)} games and apps with known problems on Switch 2.</span></a>
+  <a href="/upgrades/">{hub_icon("up")}<b>Switch 2 Editions</b><span>{eds} upgrades: what they cost and what improves.</span></a>
+  <a href="/coming-soon/">{hub_icon("cal")}<b>Coming soon</b><span>Every upcoming Switch 2 release, with dates.</span></a>
+</div>
 {signup("home")}
 </section>'''
     return page("/", "Nintendo Critic: the Switch 2 game checker", "Game-key cards, Switch 1 compatibility and Switch 2 upgrades, checked daily.", body)
@@ -444,8 +555,9 @@ def newsletter_json(games):
     if soon:
         sections.append({"title": "Out in the next 7 days", "items": [
             {"title": g["Name"], "url": f"{SITE}/games/{g['slug']}/" if g.get("Approved") else f"{SITE}/coming-soon/",
-             "note": fmt_date(g["Release date"], False) + " · " + (g.get("Cartridge") or "Not announced")} for g in soon]})
-    gkc = [g for g in games if g.get("Cartridge") in CART_CLASS]
+             "note": fmt_date(g["Release date"], False) + " · " + (g.get("Cartridge") or "Not announced"),
+             "image": media.img(g["cover"], "t_cover_small") if g.get("cover") else ""} for g in soon]})
+    gkc = [g for g in games if g.get("Cartridge") in CART_KIND]
     sections.append({"title": "Game-key card or full cartridge?", "items": [
         {"title": f"{len(gkc)} games checked so far", "url": f"{SITE}/game-key-cards/", "note": "Search any boxed Switch 2 game before you buy."}]})
     return json.dumps({
@@ -503,9 +615,11 @@ us or subscribe to the weekly email.</p>
 when you visit its site; see <a href="https://www.amazon.com/gp/help/customer/display.html?nodeId=GX7NJQ4ZB8MHFRNJ">Amazon's
 privacy notice</a>. To send Canadian visitors to amazon.ca, your browser checks its own time zone and language
 setting; that check stays on your device.</p>
-<h2>Fonts</h2>
-<p>Fonts load from Google Fonts, which receives your IP address when your browser fetches them. See
-<a href="https://policies.google.com/privacy">Google's privacy policy</a>.</p>
+<h2>Fonts, images and trailers</h2>
+<p>Fonts load from Google Fonts, and game box art and screenshots load from IGDB's image servers. Both receive your
+IP address when your browser fetches the files. See <a href="https://policies.google.com/privacy">Google's privacy
+policy</a>. Trailers show a preview image from YouTube, and the YouTube player (which may set YouTube cookies) only
+loads after you press play.</p>
 <h2>Contact</h2>
 <p>Questions about privacy? Email <a href="mailto:hello@nintendocritic.com">hello@nintendocritic.com</a>.</p>
 </section>"""
@@ -569,6 +683,7 @@ def build(out, preview):
         p.write_text(content)
 
     (out / "newsletter.json").write_text(newsletter_json(games))
+    (out / "static" / "games.json").write_text(search_index(games))
     approved = {f"games/{g['slug']}/index.html" for g in games if g.get("Approved")}
     urls = [rel.removesuffix("index.html") for rel in pages
             if rel != "404.html" and (not rel.startswith("games/") or rel in approved)]
