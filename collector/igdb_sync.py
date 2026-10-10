@@ -4,16 +4,22 @@
 - Release-date changes on existing rows are updated and written to the Change log.
 - Rows a person has edited keep their Publisher; only IGDB ID and Release date are managed here.
 
-Usage: python3 collector/igdb_sync.py [--dry-run] [--no-log-new] [--days-back N] [--days-ahead N]
+Usage: python3 collector/igdb_sync.py [--dry-run] [--no-log-new] [--days-back N] [--days-ahead N] [--prune]
+
+--prune deletes untouched IGDB drafts that no longer pass the quality filter
+(Status Draft, not approved, no verdict or notes written by a person).
 """
 import argparse
 import datetime as dt
 import sys
 
 from common import (CHANGELOG_TABLE, GAMES_TABLE, IGDB_SWITCH2, IGDB, Airtable, load_env, norm)
+from quality import FIELDS, is_worth_a_page
 
 # IGDB game_type ids worth a page: main game, remake, remaster, expanded game (e.g. Switch 2 Editions), port.
 KEEP_TYPES = {0, 8, 9, 10, 11}
+# IGDB release_region ids: 2 = North America, 8 = worldwide.
+NA_REGIONS = {2, 8}
 
 
 def vague_note(human):
@@ -25,24 +31,26 @@ def fetch_releases(igdb, start, end):
     offset = 0
     while True:
         rows = igdb.query("release_dates", (
-            "fields date,date_format,human,game.id,game.name,game.game_type,game.version_parent,"
-            "game.involved_companies.company.name,game.involved_companies.publisher;"
+            "fields date,date_format,human,release_region,game.id,game.name,game.game_type,game.version_parent,"
+            f"game.involved_companies.company.name,game.involved_companies.publisher,{FIELDS};"
             f" where platform = {IGDB_SWITCH2} & date >= {int(start.timestamp())} & date < {int(end.timestamp())};"
-            f" sort date asc; limit 500; offset {offset};"))
+            f" sort id asc; limit 500; offset {offset};"))  # stable order, or paging skips rows
         for r in rows:
             g = r.get("game") or {}
             if not g.get("name") or g.get("version_parent") or g.get("game_type", 0) not in KEEP_TYPES:
                 continue  # skip DLC, bundles, deluxe/digital editions
+            if not is_worth_a_page(g):
+                continue  # eShop filler
             # date_format 0 is an exact day; anything else ("Nov 2026", "2026", "Q4 2026") is stored
             # by IGDB as the last day of that period, so keep only the human text for those.
             exact = r.get("date_format", 0) == 0
             day = dt.datetime.fromtimestamp(r["date"], dt.timezone.utc).date().isoformat() if exact else None
             pubs = [c["company"]["name"] for c in g.get("involved_companies", []) if c.get("publisher")]
+            # Prefer the North American or worldwide date (our readers), then any exact date, then earliest.
+            rank = (0 if r.get("release_region") in NA_REGIONS else 1, 0 if day else 1, day or "9999")
             cur = games.get(g["id"])
-            # A game can have several regional dates; prefer an exact one, then the earliest.
-            better = not cur or (day and (not cur["date"] or day < cur["date"]))
-            if better:
-                games[g["id"]] = {"id": g["id"], "name": g["name"], "date": day,
+            if not cur or rank < cur["rank"]:
+                games[g["id"]] = {"id": g["id"], "name": g["name"], "date": day, "rank": rank,
                                   "human": r.get("human", ""), "publisher": ", ".join(pubs)}
         if len(rows) < 500:
             return list(games.values())
@@ -55,6 +63,7 @@ def main():
     ap.add_argument("--no-log-new", action="store_true", help="don't add Change log rows for new games (first backfill)")
     ap.add_argument("--days-back", type=int, default=30)
     ap.add_argument("--days-ahead", type=int, default=180)
+    ap.add_argument("--prune", action="store_true", help="delete untouched IGDB drafts that fail the quality filter")
     args = ap.parse_args()
 
     load_env()
@@ -67,9 +76,21 @@ def main():
     by_igdb = {r["fields"]["IGDB ID"]: r for r in rows if r["fields"].get("IGDB ID")}
     by_name = {norm(r["fields"].get("Name", "")): r for r in rows}
 
+    unlinked = [r for r in rows if not r["fields"].get("IGDB ID")]
+
+    def loose_match(name):
+        # Hand-added rows often use a longer or shorter title ("EA Sports Madden NFL 26" vs
+        # "Madden NFL 26"). Match when one title contains the other; only for rows not yet linked.
+        key = norm(name)
+        hits = [r for r in unlinked if len(key) >= 10 and len(norm(r["fields"].get("Name", ""))) >= 10
+                and (key in norm(r["fields"]["Name"]) or norm(r["fields"]["Name"]) in key)]
+        return hits[0] if len(hits) == 1 else None
+
     creates, updates, log = [], [], []
     for g in releases:
-        row = by_igdb.get(g["id"]) or by_name.get(norm(g["name"]))
+        row = by_igdb.get(g["id"]) or by_name.get(norm(g["name"])) or loose_match(g["name"])
+        if row in unlinked:
+            unlinked.remove(row)
         if not row:
             creates.append({
                 "Name": g["name"], "Status": "Draft", "Publisher": g["publisher"], "Release date": g["date"],
@@ -109,6 +130,19 @@ def main():
     names = {r["id"]: r["fields"].get("Name") for r in rows}
     for rid, ch in updates:
         print(f"  ~ {names[rid]}: {ch}")
+
+    if args.prune:
+        keep_ids = {g["id"] for g in releases}
+        untouched = lambda f: (f.get("Status") == "Draft" and not f.get("Approved") and not f.get("Verdict")
+                               and not f.get("We played it") and not f.get("Notes")
+                               and (f.get("Sources") or "").startswith("https://www.igdb.com/"))
+        window_start = (now - dt.timedelta(days=args.days_back)).date().isoformat()
+        # Only rows dated inside the window this run fetched; older rows weren't checked, so leave them.
+        in_window = lambda f: (f.get("Release date") or "9999") >= window_start
+        prune = [r for r in rows if untouched(r["fields"]) and in_window(r["fields"])
+                 and r["fields"].get("IGDB ID") not in keep_ids]
+        print(f"Pruning {len(prune)} untouched drafts that fail the quality filter")
+        at.delete(GAMES_TABLE, [r["id"] for r in prune])
 
     at.create(GAMES_TABLE, creates)
     at.update(GAMES_TABLE, updates)

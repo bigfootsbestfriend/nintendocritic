@@ -105,6 +105,14 @@ class Airtable:
     def create(self, table, fields_list):
         return self._batched("POST", table, [{"fields": f} for f in fields_list])
 
+    def delete(self, table, record_ids):
+        for i in range(0, len(record_ids), 10):
+            if self.dry_run:
+                continue
+            q = "&".join("records[]=" + rid for rid in record_ids[i:i + 10])
+            http("DELETE", self._url(table) + "?" + q, self.headers)
+            time.sleep(0.25)
+
     def update(self, table, updates):
         """updates: list of (record_id, fields)."""
         return self._batched("PATCH", table, [{"id": rid, "fields": f} for rid, f in updates])
