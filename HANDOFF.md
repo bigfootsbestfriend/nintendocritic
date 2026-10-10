@@ -47,6 +47,24 @@ Keyword research (Semrush, US) drove the focus:
 - Signup boxes appear once `KIT_FORM_URL` is set.
 - Optional Games fields the page uses if present: `We played it`, `Download size GB`, plus `Score` on Reviews.
 
+## Added 2026-10-10 (reviews/upgrades/guide decision)
+
+Mike decided: no standalone reviews. Instead:
+- **Game pages:** the verdict and a "Played on Switch 2 · Mike Johnston" note (Games fields `We played it`, optional `Played date`)
+  sit under "Is X worth it on Switch 2?". Performance sits under "How does X run on Switch 2?". FAQPage schema is built from
+  the visible answers. These match the searches people make (Semrush: per-game "worth it / how does it run" long tail;
+  the game's main search, e.g. "cyberpunk 2077 switch 2", is 8.1k a month).
+- **/upgrades/:** built from `data/upgrades.json` (69 paid, 60 free, Nintendo's 15 free Switch 1 updates, upcoming).
+  Prices come from Nintendo Everything (Oct 3, 2026), cross-checked with Nintendo Life. Update the file when new packs
+  are announced and bump `checked`.
+- **Review feeds:** `collector/reviews_sync.py`, run nightly, adds Switch 2 reviews from Nintendo Life, Nintendo
+  Everything and Nintendo World Report to the Reviews table. It stores outlet, headline and link only; `Summary` is written
+  later in our own words. It logs reviews for games missing from the Games table: Kingdom Hearts, The Witcher 3, Diablo IV,
+  MGS Master Collection Vol. 2 and others were missing on 2026-10-10.
+- **/is-switch-2-worth-it/:** sourced facts (US price $499.99 since Sep 1, 2026; Nintendo specs), live counts and an FAQ.
+  Mike's first-hand parts come from `content/worth-it.json` (short_answer, my_experience, worth_it_if, wait_if); empty
+  fields are left off the page.
+
 ## Waiting on Mike
 
 1. **A second, free Kit account** just for Nintendo Critic, separate from the Kitchen Magpie account so it doesn't inflate those numbers.

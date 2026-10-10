@@ -33,6 +33,7 @@ NAV = [
     ("/compatibility/", "Compatibility"),
     ("/upgrades/", "Upgrades"),
     ("/coming-soon/", "Coming soon"),
+    ("/is-switch-2-worth-it/", "Worth it?"),
 ]
 COMPAT_CLASS = {"Not compatible": "bad", "Partly compatible": "bad", "Partly": "bad",
                 "Issues reported": "warn", "Fixed": "full", "Works": "full"}
@@ -507,6 +508,83 @@ rate or HDR, depending on the game: {e(nin_free)}.</p>
                 "Nintendo Switch Online, and what each Switch 2 Edition adds.", body, "/upgrades/")
 
 
+def worth_it_page(games, compat):
+    """'Is the Switch 2 worth it?': sourced facts and live counts, plus Mike's first-hand sections from content/worth-it.json."""
+    mine = json.loads((ROOT / "content" / "worth-it.json").read_text())
+    up = json.loads((ROOT / "data" / "upgrades.json").read_text())
+    today = TODAY.isoformat()
+    out_now = [g for g in games if g.get("Release date") and g["Release date"] <= today]
+    gkc = sum(1 for g in games if g.get("Cartridge") == "Game-key card")
+    known = sum(1 for g in games if g.get("Cartridge") in CART_KIND)
+    paras = lambda t: "".join(f"<p>{e(x.strip())}</p>" for x in t.split("\n\n") if x.strip())
+    lst = lambda xs: "<ul>" + "".join(f"<li>{e(x)}</li>" for x in xs) + "</ul>"
+
+    short = (f'<div class="verdict"><div class="tag">SHORT ANSWER</div><p>{e(mine["short_answer"])}</p></div>'
+             if mine.get("short_answer") else "")
+    fit = ""
+    if mine.get("worth_it_if") or mine.get("wait_if"):
+        fit = ('<div class="two-col">'
+               + (f'<div class="panel"><h2>Worth it if you…</h2>{lst(mine["worth_it_if"])}</div>' if mine.get("worth_it_if") else "")
+               + (f'<div class="panel"><h2>Wait if you…</h2>{lst(mine["wait_if"])}</div>' if mine.get("wait_if") else "")
+               + "</div>")
+    exp = (f'<div class="panel played"><div class="who">Played on Switch 2 · Mike Johnston</div>{paras(mine["my_experience"])}</div>'
+           if mine.get("my_experience") else "")
+    paid = up["paid"]
+    nin_paid = sorted({u["price"] for u in paid if u.get("nintendo")})
+    qas = [
+        ("How much is the Switch 2?",
+         "$499.99 in the US. Nintendo raised the price from $449.99 on September 1, 2026; retailers can still run their own deals."),
+        ("Do Switch 1 games work on Switch 2?",
+         f"Almost all of them do. We track {len(compat)} games and apps with known problems or fixes on our compatibility list, "
+         f"and {len(up['nintendo_free_updates'])} of Nintendo's own Switch 1 games got free updates that make them look or run better."),
+        ("How much do Switch 2 upgrade packs cost?",
+         f"If you already own a game on Switch 1, its Switch 2 upgrade costs between ${min(u['price'] for u in paid):.2f} and "
+         f"${max(u['price'] for u in paid):.2f}, and {len(up['free'])} games upgrade for free. Nintendo's own packs cost "
+         f"${nin_paid[0]:.2f} to ${nin_paid[-1]:.2f}."),
+        ("Are Switch 2 games on the cartridge?",
+         f"Not always. Of the {known} games where we know what's in the box, {gkc} are game-key cards: the cartridge "
+         "unlocks a download, so you need an internet connection and storage space the first time you play."),
+        ("Do I need a new memory card for Switch 2?",
+         "Only if 256 GB isn't enough. The Switch 2 takes microSD Express cards (up to 2 TB); ordinary microSD cards from the "
+         "Switch 1 can only be used to copy screenshots and videos across."),
+    ]
+    facts = [
+        ("Price (US)", "$499.99", "Up from $449.99 on September 1, 2026."),
+        ("Screen", '7.9" 1080p, up to 120 Hz', "LCD with HDR10 and variable refresh rate."),
+        ("On the TV", "Up to 4K at 60 fps", "120 fps at 1080p or 1440p in games that support it."),
+        ("Storage", "256 GB", "Expand with microSD Express only (up to 2 TB)."),
+        ("Battery", "About 2 to 6.5 hours", "Depends on the game."),
+        ("Games out now", f"{len(out_now)}", "Switch 2 games and Switch 2 Editions we track, not counting eShop filler."),
+    ]
+    fact_html = '<div class="facts">' + "".join(
+        f'<div class="fact"><span class="k">{e(k)}</span><span class="v">{e(v)}</span><p class="n">{e(n)}</p></div>' for k, v, n in facts) + "</div>"
+    costs = f'''<div class="panel"><h2>What it really costs</h2>
+<p>The console is $499.99, but a few things change what you spend after that:</p>
+<ul>
+<li><strong>Game-key cards.</strong> {gkc} of the {known} boxed games whose cartridge type is known are game-key cards,
+so the cartridge needs a download before it plays. See <a href="/game-key-cards/">the full list</a>.</li>
+<li><strong>Upgrade packs.</strong> Already own Switch 1 games? Their Switch 2 versions cost from free to
+${max(u["price"] for u in paid):.2f}. See <a href="/upgrades/">every upgrade price</a>.</li>
+<li><strong>Storage.</strong> 256 GB fills up quickly with downloads. Extra space means a microSD Express card; your old
+microSD cards won't run games.</li>
+<li><strong>Your Switch 1 library.</strong> It comes with you. Check <a href="/compatibility/">the compatibility list</a>
+for the handful of games and apps with problems.</li>
+</ul></div>'''
+    srcs = [("https://www.nintendo.com/us/whatsnew/price-revision-for-nintendo-switch-2-system/", "Price revision for Nintendo Switch 2 (Nintendo)"),
+            ("https://www.nintendo.com/us/gaming-systems/switch-2/tech-specs/", "Nintendo Switch 2 tech specs (Nintendo)")]
+    src_html = '<div class="sources"><strong>Sources</strong><ul>' + "".join(
+        f'<li><a href="{u}" target="_blank" rel="noopener">{e(t)}</a></li>' for u, t in srcs) + "</ul></div>"
+    body = f'''<section aria-labelledby="w-title">
+<div class="eyebrow">Switch 2 buyer's guide · Updated {fmt_date(mine.get("updated") or today)}</div>
+<h1 id="w-title">Is the Switch 2 worth it in {TODAY.year}?</h1>
+<p class="lede">What you get for $499.99, what it really costs once you add games and storage, and who should wait.</p>
+{short}{fact_html}{fit}{exp}{costs}{faq_block(qas)}{src_html}{signup("worth")}
+</section>'''
+    return page("/is-switch-2-worth-it/", f"Is the Switch 2 worth it in {TODAY.year}? Price, games and real costs | Nintendo Critic",
+                "Is the Nintendo Switch 2 worth $499.99? What you get, what Switch 2 games and upgrades really cost, "
+                "game-key cards, storage and who should wait.", body)
+
+
 def upcoming(games):
     soon = [g for g in games if g.get("Release date", "") >= TODAY.isoformat()]
     soon.sort(key=lambda g: g["Release date"])
@@ -751,6 +829,7 @@ def build(out, preview):
         "upgrades/index.html": upgrades_page(games),
         "coming-soon/index.html": radar_page(games),
         "about/index.html": about_page(games),
+        "is-switch-2-worth-it/index.html": worth_it_page(games, compat),
         "privacy/index.html": privacy_page(),
         "404.html": not_found_page(),
     }

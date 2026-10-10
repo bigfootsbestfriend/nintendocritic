@@ -307,3 +307,5 @@ a.gcard:hover .t { color: var(--accent); }
 .faq h3 { font: 700 17px var(--display); margin: 18px 0 6px; }
 .faq h3:first-of-type { margin-top: 8px; }
 .faq p { margin: 0; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.panel.played p + p { margin-top: 10px; }
