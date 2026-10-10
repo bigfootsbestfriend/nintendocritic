@@ -1,0 +1,85 @@
+# Handoff: where Nintendo Critic stands
+
+Last updated 2026-10-09. To pick this up in a new Claude Code session, open this repo and say:
+**"Read HANDOFF.md and carry on with the next step."**
+
+## What the site is
+
+An independent Switch 2 buyer's guide at nintendocritic.com. For each game it covers:
+- full cartridge vs game-key card
+- Switch 1 → 2 compatibility
+- upgrade paths and cost
+- performance
+- a review roundup (links plus our own one-line summaries, never copied text or aggregator scores)
+- a short verdict, and an optional "We played it" note written by a person
+
+Revenue comes from Amazon affiliate links: amazon.com tag `magpie014-20`, amazon.ca tag `thekitmag-20`.
+Canadian visitors are detected in the browser by time zone or language.
+Footer carries a "Not affiliated with Nintendo" line and the Amazon disclosure.
+
+Keyword research (Semrush, US) drove the focus:
+- backwards compatibility: ~15k searches/month
+- game-key cards: ~12k/month, low difficulty
+- "is switch 2 worth it": ~20k/month
+- avoided: deals (DekuDeals owns it) and score aggregation (low demand)
+
+## Done
+
+- **Brand:** cartridge logo in `brand/`. Palette is grape `#4a23b5`, marigold `#ffb627` and ink `#1d1433`. Fonts are Bricolage Grotesque, Atkinson Hyperlegible and JetBrains Mono.
+- **Mockup:** `mockup/index.html`, approved design with five views: game page, game-key cards, compatibility, upgrades, coming soon.
+- **Airtable base "Nintendo Critic"** (`appSsH1VGhRnPpTc3`), in the non-Kitchen-Magpie workspace. Tables:
+  - Games (~518 rows; Status, Approved checkbox, Cartridge + confidence, upgrade fields, Sources)
+  - Compatibility (12)
+  - Reviews (1)
+  - Change log
+- **Nightly IGDB sync:** `collector/igdb_sync.py` runs via `.github/workflows/nightly.yml` at 09:17 UTC.
+  - Adds new Switch 2 games as Draft rows and logs release-date changes.
+  - Filters eShop filler using `collector/quality.py`; add real games IGDB misses to its `ALWAYS` set.
+  - Full backfill since launch already done: `--days-back 500 --prune`.
+- **GitHub secrets set:** `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, `AIRTABLE_TOKEN`.
+
+## Waiting on Mike
+
+1. **A second, free Kit account** just for Nintendo Critic, separate from the Kitchen Magpie account so it doesn't inflate those numbers.
+   - Sign up with e.g. `hello@nintendocritic.com`, set up through Namecheap's free email forwarding.
+   - Create an API key and add it as the `KIT_API_KEY` repo secret.
+   - The claude.ai Kit connector is the **Magpie** account. Don't use it for this.
+2. **Namecheap DNS**, done in one sitting once the site exists: GitHub Pages records plus Kit's sending-domain records.
+
+## Next steps, in order
+
+1. **Nintendo checks:**
+   - the compatibility list (status changes go to the Change log)
+   - store listings: the game-key card badge → Cartridge confidence "Store badge", plus download size
+2. **Review feeds:** RSS from Nintendo Life, Nintendo World Report and Nintendo Everything → the Reviews table (link and score only, summaries written in our own words).
+3. **Site generator:** Airtable → static pages in the mockup's design → GitHub Pages, then the Namecheap DNS records.
+   - Only Approved games get pages; the hub lists can show drafts.
+4. **Scheduled Claude Code task** (runs on the Max plan, no API key): drafts verdicts and review summaries, and the weekly email draft in the new Kit account. Mike presses Send.
+
+## Running locally
+
+Create `.env` in the repo root. It's gitignored, so never commit it.
+
+```
+IGDB_CLIENT_ID=...
+IGDB_CLIENT_SECRET=...
+AIRTABLE_TOKEN=...
+```
+
+The values are in the Twitch dev console (dev.twitch.tv), Airtable (airtable.com/create/tokens) and the original machine's `~/Work/nintendocritic/.env`.
+GitHub secrets can't be read back, so copy that file across or make new keys.
+
+Then:
+- `python3 collector/igdb_sync.py --dry-run`: preview only
+- the same command without `--dry-run`: writes to Airtable
+
+## Gotchas
+
+- **The repo is public.** Git here uses the GitHub no-reply email:
+  `git config user.email "209829115+bigfootsbestfriend@users.noreply.github.com"`
+- **The Airtable token lacks `schema.bases:read`,** so metadata API calls fail. Record reads and writes work.
+- **IGDB dates:**
+  - Only `date_format` 0 is an exact day; vague dates go in "Release date note".
+  - North American or worldwide dates are preferred.
+  - Always page with `sort id asc`.
+- **Airtable free plan caps a base at 1,000 rows.** ~518 are used, growing about 30 a month.
