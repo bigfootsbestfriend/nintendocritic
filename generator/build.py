@@ -9,6 +9,7 @@ Only games with the Approved box ticked get their own page; the hub lists show e
 import argparse
 import datetime as dt
 import html
+import json
 import re
 import shutil
 import sys
@@ -23,7 +24,8 @@ from common import COMPAT_TABLE, GAMES_TABLE, REVIEWS_TABLE, Airtable, load_env 
 LAUNCHED = False
 SITE = "https://nintendocritic.com"
 AMAZON_TAG = "magpie014-20"  # site.js swaps in the amazon.ca tag for Canadian visitors
-KIT_FORM_URL = None  # e.g. "https://app.kit.com/forms/1234567/subscriptions" once the Nintendo Critic Kit account exists
+# Newsletter Worker (~/Work/newsletter). Signup boxes stay hidden until this is set.
+NEWSLETTER_API = ""  # e.g. "https://newsletter.<account>.workers.dev"
 
 NAV = [
     ("/game-key-cards/", "Game-key cards"),
@@ -76,12 +78,12 @@ def pill(text, cls):
 
 
 def signup(uid):
-    if not KIT_FORM_URL:
+    if not NEWSLETTER_API:
         return ""
     return f'''<div class="signup">
   <h2>Know what's in the box before you buy</h2>
   <p>One email a week: new Switch 2 releases, which ones are game-key cards, and compatibility fixes. Unsubscribe anytime.</p>
-  <form action="{e(KIT_FORM_URL)}" method="post"><label for="email-{uid}" class="sr">Email address</label><input id="email-{uid}" name="email_address" type="email" required placeholder="you@example.com" autocomplete="email"><button type="submit">Sign me up</button></form>
+  <form action="{e(NEWSLETTER_API)}/subscribe" method="post"><input type="hidden" name="site" value="nintendocritic"><input class="sr" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><label for="email-{uid}" class="sr">Email address</label><input id="email-{uid}" name="email" type="email" required placeholder="you@example.com" autocomplete="email"><button type="submit">Sign me up</button></form>
 </div>'''
 
 
@@ -116,6 +118,7 @@ def page(path, title, description, body, current=None, index=True):
   <div class="wrap">
     <p><strong>Nintendo Critic</strong> is an independent buyer's guide. Not affiliated with, endorsed or sponsored by Nintendo. Game names are trademarks of their owners.</p>
     <p>As an Amazon Associate we earn from qualifying purchases. Questions or corrections: <a href="mailto:hello@nintendocritic.com">hello@nintendocritic.com</a></p>
+    <p><a href="/about/">About</a> · <a href="/privacy/">Privacy</a>{" · <a href=\"/newsletter/\">Weekly email</a>" if NEWSLETTER_API else ""}</p>
   </div>
 </footer>
 <script src="/static/site.js" defer></script>
@@ -395,6 +398,134 @@ def home_page(games, compat):
     return page("/", "Nintendo Critic: the Switch 2 game checker", "Game-key cards, Switch 1 compatibility and Switch 2 upgrades, checked daily.", body)
 
 
+NEWSLETTER_STATES = {
+    "check": "Almost done: check your inbox for a confirmation email and click the button in it.",
+    "invalid": "That email address doesn't look right. Please try again.",
+    "confirming": "Confirming your subscription…",
+    "confirmed": "You're subscribed. The next weekly email will land in your inbox.",
+    "expired": "That confirmation link has expired. Sign up again below and we'll send a new one.",
+    "error": "Something went wrong on our side. Please try again in a few minutes.",
+}
+
+
+def newsletter_page():
+    states = "".join(f'<p class="lede" data-state="{k}" hidden><strong>{e(v)}</strong></p>' for k, v in NEWSLETTER_STATES.items())
+    script = f"""<script>
+(() => {{
+  const show = s => document.querySelectorAll("[data-state]").forEach(p => p.hidden = p.dataset.state !== s);
+  const t = new URLSearchParams(location.search).get("confirm");
+  if (t) {{
+    show("confirming");
+    history.replaceState(null, "", location.pathname);
+    fetch({json.dumps(NEWSLETTER_API + "/confirm")}, {{method: "POST", headers: {{"content-type": "application/json"}}, body: JSON.stringify({{t}})}})
+      .then(r => r.json()).then(d => show(d.state === "invalid" ? "expired" : d.state)).catch(() => show("error"));
+  }} else if (location.hash) show(location.hash.slice(1));
+}})();
+</script>"""
+    body = f'''<section aria-labelledby="n-title">
+<div class="eyebrow">Weekly email</div>
+<h1 id="n-title">The Nintendo Critic weekly</h1>
+{states}
+<p class="lede">One email a week: the Switch 2 games coming out next, which ones are game-key cards, and any Switch 1 compatibility fixes. No spam, and you can unsubscribe in one click.</p>
+{signup("newsletter")}
+</section>{script}'''
+    return page("/newsletter/", "The Nintendo Critic weekly email", "A weekly email on new Switch 2 releases, game-key cards and compatibility fixes.", body)
+
+
+def newsletter_json(games):
+    """This week's content for the weekly email; the newsletter repo turns it into a Resend broadcast."""
+    week = (TODAY + dt.timedelta(days=7)).isoformat()
+    soon = [g for g in upcoming(games) if g["Release date"] <= week]
+    sections = []
+    if soon:
+        sections.append({"title": "Out in the next 7 days", "items": [
+            {"title": g["Name"], "url": f"{SITE}/games/{g['slug']}/" if g.get("Approved") else f"{SITE}/coming-soon/",
+             "note": fmt_date(g["Release date"], False) + " · " + (g.get("Cartridge") or "Not announced")} for g in soon]})
+    gkc = [g for g in games if g.get("Cartridge") in CART_CLASS]
+    sections.append({"title": "Game-key card or full cartridge?", "items": [
+        {"title": f"{len(gkc)} games checked so far", "url": f"{SITE}/game-key-cards/", "note": "Search any boxed Switch 2 game before you buy."}]})
+    return json.dumps({
+        "site": "nintendocritic",
+        "date": TODAY.isoformat(),
+        "subject": f"Switch 2 this week: {len(soon)} new release{'s' if len(soon) != 1 else ''}" if soon else "Switch 2 this week",
+        "intro": "Here's what's coming to Switch 2, and what's in the box.",
+        "sections": sections,
+    }, indent=1)
+
+
+ABOUT = """<section aria-labelledby="a-title" class="prose">
+<div class="eyebrow">About</div>
+<h1 id="a-title">About Nintendo Critic</h1>
+<p class="lede">Short version: we check {n} Switch 2 games for what's actually in the box, whether your Switch 1
+games still work, and what upgrades cost, and we show our sources on every page.</p>
+<div class="author" id="who">
+<img src="/static/mike-johnston.jpg" width="160" height="160" alt="Mike Johnston">
+<div><h2>Who runs this site</h2>
+<p>Nintendo Critic is run by Mike Johnston. My day job is running the tech side of
+<a href="https://www.thekitchenmagpie.com/">The Kitchen Magpie</a>, a food blog. I built this site because the
+Switch 2 made buying a boxed game confusing: some cartridges hold the whole game and some are just a key to a
+download, and the box doesn't always make that clear.</p>
+<p>The site is independent. It isn't affiliated with Nintendo or any publisher, and nobody pays for a verdict.</p></div>
+</div>
+<h2>How a game gets checked</h2>
+<p>For each game I look at the publisher's announcements, the Nintendo eShop and retail listings, and press coverage,
+and record whether the boxed version is a full cartridge, a game-key card or a code in a box. Where that only comes
+from press reports so far, the page says so until a store listing confirms it. I use AI tools to help find and read
+those sources, and each game page links the sources behind it so you can check them yourself.</p>
+<h2>Reviews and verdicts</h2>
+<p>We don't copy review text or publish aggregate scores. The review roundup links each outlet's own review with a
+one-line summary in our own words, and links to Metacritic and OpenCritic if you want the averages. Our verdict is
+about whether the Switch 2 version is worth buying, especially if you already own the game on Switch 1.</p>
+<h2>Where the release data comes from</h2>
+<p>Release dates, publishers and the list of upcoming games come from <a href="https://www.igdb.com/">IGDB</a>
+and publisher announcements, re-checked every day. Dates for smaller games can move, so treat the coming-soon list
+as a guide.</p>
+<h2>How we make money</h2>
+<p>Buy buttons link to Amazon. If you buy through them we earn a small commission, at no extra cost to you. It
+doesn't change what we say about a game.</p>
+<h2>Corrections</h2>
+<p>Publishers change cartridge types between regions and print runs, and patches fix compatibility problems. If you
+spot something wrong, email <a href="mailto:hello@nintendocritic.com">hello@nintendocritic.com</a> with a link or a
+photo of the box and we'll fix it.</p>
+</section>"""
+
+PRIVACY = """<section aria-labelledby="p-title" class="prose">
+<div class="eyebrow">Last updated {date}</div>
+<h1 id="p-title">Privacy policy</h1>
+<p>Nintendo Critic is a free website. We don't ask you to sign up, and we only have your email address if you email
+us or subscribe to the weekly email.</p>
+{newsletter}<h2>Amazon links</h2>
+<p>Buy buttons go to Amazon with our affiliate tag, so Amazon can tell the sale came from us. Amazon may set cookies
+when you visit its site; see <a href="https://www.amazon.com/gp/help/customer/display.html?nodeId=GX7NJQ4ZB8MHFRNJ">Amazon's
+privacy notice</a>. To send Canadian visitors to amazon.ca, your browser checks its own time zone and language
+setting; that check stays on your device.</p>
+<h2>Fonts</h2>
+<p>Fonts load from Google Fonts, which receives your IP address when your browser fetches them. See
+<a href="https://policies.google.com/privacy">Google's privacy policy</a>.</p>
+<h2>Contact</h2>
+<p>Questions about privacy? Email <a href="mailto:hello@nintendocritic.com">hello@nintendocritic.com</a>.</p>
+</section>"""
+
+PRIVACY_NEWSLETTER = """<h2>Weekly email</h2>
+<p>If you subscribe, we store your email address with <a href="https://resend.com/legal/privacy-policy">Resend</a>,
+the service that sends the email, and use it only to send the weekly email. We ask you to confirm by clicking a link
+first. Every email has a one-click unsubscribe link, and we never sell or share the list.</p>
+"""
+
+
+def about_page(games):
+    body = ABOUT.format(n=len(games)) + "<script type=\"application/ld+json\">" + json.dumps({
+        "@context": "https://schema.org", "@type": "AboutPage", "url": f"{SITE}/about/",
+        "mainEntity": {"@type": "Person", "name": "Mike Johnston", "image": f"{SITE}/static/mike-johnston.jpg",
+                       "url": f"{SITE}/about/#who"}}) + "</script>"
+    return page("/about/", "About Nintendo Critic and how we check", "Who runs Nintendo Critic, where our Switch 2 game data comes from and how we check it.", body)
+
+
+def privacy_page():
+    body = PRIVACY.format(date=fmt_date(TODAY.isoformat()), newsletter=PRIVACY_NEWSLETTER if NEWSLETTER_API else "")
+    return page("/privacy/", "Privacy policy | Nintendo Critic", "How Nintendo Critic handles your data.", body)
+
+
 def not_found_page():
     body = '''<section><div class="eyebrow">404</div><h1>That page isn't here</h1>
 <p class="lede">The game may not have its own page yet. Try the <a href="/game-key-cards/">game-key card list</a> or <a href="/coming-soon/">upcoming games</a>.</p></section>'''
@@ -414,8 +545,12 @@ def build(out, preview):
         "compatibility/index.html": compat_page(compat),
         "upgrades/index.html": upgrades_page(games),
         "coming-soon/index.html": radar_page(games),
+        "about/index.html": about_page(games),
+        "privacy/index.html": privacy_page(),
         "404.html": not_found_page(),
     }
+    if NEWSLETTER_API:
+        pages["newsletter/index.html"] = newsletter_page()
     seen = set()
     for g in games:
         if g["has_page"]:
@@ -429,6 +564,7 @@ def build(out, preview):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content)
 
+    (out / "newsletter.json").write_text(newsletter_json(games))
     approved = {f"games/{g['slug']}/index.html" for g in games if g.get("Approved")}
     urls = [rel.removesuffix("index.html") for rel in pages
             if rel != "404.html" and (not rel.startswith("games/") or rel in approved)]
