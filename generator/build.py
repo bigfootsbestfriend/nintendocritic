@@ -32,6 +32,7 @@ NAV = [
     ("/game-key-cards/", "Game-key cards"),
     ("/compatibility/", "Compatibility"),
     ("/upgrades/", "Upgrades"),
+    ("/my-switch-library/", "My library"),
     ("/coming-soon/", "Coming soon"),
     ("/is-switch-2-worth-it/", "Worth it?"),
 ]
@@ -423,10 +424,63 @@ def compat_page(compat):
   <div class="empty" hidden>Not on the problem list, so it should work fine. Nintendo reports nearly all Switch 1 games run on Switch 2.</div>
 </div>
 <div class="count">Statuses from press reports and Nintendo's compatibility list.</div>
+<p class="lib-cta"><a href="/my-switch-library/">Check all your games at once →</a> Add your library and see problems, upgrades and prices together.</p>
 {signup("compat")}
 </section>'''
     return page("/compatibility/", "Switch 1 games on Switch 2: compatibility checker | Nintendo Critic",
                 "Does your Switch 1 game work on Switch 2? Search the games and apps with known problems and fixes.", body, "/compatibility/")
+
+
+def library_json(games, compat):
+    """Data for the library checker: Switch 1 names for autocomplete, plus every upgrade, free update and known problem."""
+    up = json.loads((ROOT / "data" / "upgrades.json").read_text())
+    s1 = json.loads((ROOT / "data" / "switch1.json").read_text())
+    pages = {norm_name(g["Name"]): g["slug"] for g in games if g["has_page"] and g.get("Approved")}
+    items = {}
+    for u in up["paid"]:
+        items[u["name"]] = {"u": round(u["price"], 2), **({"n": u["note"]} if u.get("note") else {})}
+    for u in up["free"]:
+        items[u["name"]] = {"u": 0}
+    for n in up["nintendo_free_updates"]:
+        items.setdefault(n, {})["fu"] = 1
+    for c in compat:
+        n = c.get("Game or app", "")
+        if n and c.get("Kind") != "App" and c.get("Status"):
+            items.setdefault(n, {}).update({"c": c["Status"], "cc": COMPAT_CLASS.get(c["Status"], "warn"), "cd": c.get("Details", "")})
+    for n, v in items.items():
+        if norm_name(n) in pages:
+            v["p"] = pages[norm_name(n)]
+    names = sorted(set(s1) | set(items), key=lambda n: (s1.index(n) if n in s1 else len(s1)))
+    return json.dumps({"names": names, "items": items, "checked": up["checked"]}, ensure_ascii=False, separators=(",", ":"))
+
+
+def library_page():
+    body = f'''<section aria-labelledby="l-title">
+<div class="eyebrow">Library checker · Upgrade prices checked {fmt_date(json.loads((ROOT / "data" / "upgrades.json").read_text())["checked"])}</div>
+<h1 id="l-title">Check your Switch 1 games for Switch 2</h1>
+<p class="lede">Add the Switch 1 games you own. We'll show which have a Switch 2 upgrade (and what it costs), which upgrade
+for free, and which have known problems on Switch 2.</p>
+<div class="lib" data-lib data-src="/static/library.json">
+  <div class="lib-add">
+    <label for="lib-q" class="eyebrow">Add a game you own</label>
+    <div class="lib-row"><input id="lib-q" type="search" placeholder="Start typing a game" autocomplete="off" role="combobox"
+      aria-expanded="false" aria-controls="lib-sug"><button type="button" class="lib-btn" data-lib-add>Add</button></div>
+    <div class="lib-sug" id="lib-sug" role="listbox" hidden></div>
+    <details class="lib-paste"><summary>Paste a whole list instead</summary>
+      <textarea rows="5" placeholder="One game per line"></textarea>
+      <button type="button" class="lib-btn" data-lib-paste>Add these games</button></details>
+  </div>
+  <div class="lib-mine" hidden><div class="lib-mine-head"><b>Your games</b> <span data-lib-n></span>
+    <button type="button" class="linkish" data-lib-share>Share list</button>
+    <button type="button" class="linkish" data-lib-clear>Clear</button></div><div class="lib-chips"></div></div>
+  <div class="lib-out" aria-live="polite"></div>
+  <p class="sub">Saved on this device only. US eShop prices; they can differ by region and during sales.</p>
+</div>
+</section>
+{signup("library")}'''
+    return page("/my-switch-library/", "Switch 2 library checker: upgrades, prices and problems for your games | Nintendo Critic",
+                "Add the Switch 1 games you own and see which have Switch 2 upgrades, what they cost, which are free, "
+                "and which have known problems on Switch 2.", body, "/my-switch-library/")
 
 
 def faq_block(qas):
@@ -499,6 +553,7 @@ ${cheapest:.2f} to ${dearest:.2f}, and {len(free)} games that upgrade for free.<
   <div class="empty" hidden>No games match. Try a shorter search.</div>
 </div>
 <div class="count">{len(paid)} paid upgrade packs · {len(free)} free upgrades<span data-count></span></div>
+<p class="lib-cta"><a href="/my-switch-library/">Check your whole library →</a> Add the games you own and see what upgrading them all would cost.</p>
 <div class="panel"><h2>Free Switch 2 updates for Nintendo's own games</h2>
 <p>These Switch 1 games got a free update that improves them on Switch 2, such as sharper resolution, a steadier frame
 rate or HDR, depending on the game: {e(nin_free)}.</p>
@@ -627,6 +682,9 @@ def radar_page(games):
 
 
 HUB_ICONS = {
+    "lib": '<rect x="3.5" y="5" width="4" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+           '<rect x="9.5" y="5" width="4" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+           '<path d="M15.6 6.2l3.6-1 3 13.4-3.6 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
     "compat": '<path d="M4 8h12l-3-3M20 16H8l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
     "up": '<path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
           '<path d="M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
@@ -670,6 +728,7 @@ def home_page(games, compat):
 </div>
 <div class="month"><h2>Next up <a class="more" href="/coming-soon/">All upcoming games →</a></h2><div class="strip">{strip}</div></div>
 <div class="hubs">
+  <a href="/my-switch-library/" class="hub-new">{hub_icon("lib")}<b>Check your library</b><span>Add your Switch 1 games: see upgrades, prices and problems in one go.</span></a>
   <a href="/game-key-cards/">{icon("gkc", 34)}<b>Game-key cards</b><span>Which boxed games make you download first.</span></a>
   <a href="/compatibility/">{hub_icon("compat")}<b>Switch 1 compatibility</b><span>The {len(compat)} games and apps with known problems on Switch 2.</span></a>
   <a href="/upgrades/">{hub_icon("up")}<b>Switch 2 Editions</b><span>{eds} upgrades: what they cost and what improves.</span></a>
@@ -833,6 +892,7 @@ def build(out, preview):
         "game-key-cards/index.html": keycards_page(games),
         "compatibility/index.html": compat_page(compat),
         "upgrades/index.html": upgrades_page(games),
+        "my-switch-library/index.html": library_page(),
         "coming-soon/index.html": radar_page(games),
         "about/index.html": about_page(games),
         "is-switch-2-worth-it/index.html": worth_it_page(games, compat),
@@ -856,6 +916,7 @@ def build(out, preview):
 
     (out / "newsletter.json").write_text(newsletter_json(games))
     (out / "static" / "games.json").write_text(search_index(games))
+    (out / "static" / "library.json").write_text(library_json(games, compat))
     approved = {f"games/{g['slug']}/index.html" for g in games if g.get("Approved")}
     urls = [rel.removesuffix("index.html") for rel in pages
             if rel != "404.html" and (not rel.startswith("games/") or rel in approved)]
