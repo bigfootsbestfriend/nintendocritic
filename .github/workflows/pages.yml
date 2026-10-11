@@ -2,7 +2,7 @@ name: Deploy site
 on:
   push:
     branches: [main]
-    paths: ["site/**", "generator/**", "collector/common.py", "collector/cart_alerts.py", ".github/workflows/pages.yml"]
+    paths: ["site/**", "generator/**", "collector/common.py", "collector/cart_alerts.py", "collector/sale_alerts.py", ".github/workflows/pages.yml"]
   schedule:
     - cron: "47 9 * * *"   # 30 minutes after the nightly data sync
   workflow_dispatch:
@@ -31,8 +31,10 @@ jobs:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
         run: python3 generator/build.py
-      - name: Save the live cartridge list (for alerts)
-        run: curl -sf https://nintendocritic.com/static/carts.json -o "$RUNNER_TEMP/old-carts.json" || true
+      - name: Save the live cartridge list and prices (for alerts)
+        run: |
+          curl -sf https://nintendocritic.com/static/carts.json -o "$RUNNER_TEMP/old-carts.json" || true
+          curl -sf https://nintendocritic.com/static/prices.json -o "$RUNNER_TEMP/old-prices.json" || true
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -43,3 +45,8 @@ jobs:
         env:
           NEWSLETTER_ADMIN_TOKEN: ${{ secrets.NEWSLETTER_ADMIN_TOKEN }}
         run: python3 collector/cart_alerts.py "$RUNNER_TEMP/old-carts.json" public/static/carts.json
+      - name: Email sale alerts
+        if: success() || failure()
+        env:
+          NEWSLETTER_ADMIN_TOKEN: ${{ secrets.NEWSLETTER_ADMIN_TOKEN }}
+        run: python3 collector/sale_alerts.py "$RUNNER_TEMP/old-prices.json" public/static/prices.json

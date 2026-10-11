@@ -126,7 +126,7 @@ document.querySelectorAll("[data-lib]").forEach(async box => {
     mine.forEach(n => {
       const it = find(n), label = link(it) || esc(n);
       if (it && it.c && it.cc !== "full") g.bad.push(`<li>${label} <span class="pill ${it.cc}">${esc(it.c)}</span>${it.cd ? `<span class="lib-note">${esc(it.cd)}</span>` : ""}</li>`);
-      if (it && it.u > 0) g.paid.push([it.u, `<li>${label} <b class="lib-price">${price(it.u)}</b>${it.n ? `<span class="lib-note">${esc(it.n)}</span>` : ""}<a class="lib-note" href="/upgrade-or-buy/?g=${encodeURIComponent(it.name)}">Upgrade or rebuy? Compare →</a></li>`]);
+      if (it && it.u > 0) g.paid.push([it.u, `<li>${label} <b class="lib-price">${price(it.u)}</b>${it.s ? ` <span class="pill sale">${it.s}% off</span>` : ""}${it.n ? `<span class="lib-note">${esc(it.n)}</span>` : ""}<a class="lib-note" href="/upgrade-or-buy/?g=${encodeURIComponent(it.name)}">Upgrade or rebuy? Compare →</a></li>`]);
       else if (it && (it.u === 0 || it.fu)) g.free.push(`<li>${label} <span class="pill full">${it.u === 0 ? "Free upgrade" : "Free update"}</span></li>`);
       else if (!(it && it.c && it.cc !== "full")) g.fine.push(`<li>${label}${it && it.c ? ` <span class="pill full">${esc(it.c)}</span>` : ""}</li>`);
     });
@@ -191,6 +191,10 @@ document.querySelectorAll("[data-lib]").forEach(async box => {
 document.querySelectorAll("[data-alert]").forEach(box => {
   const d = JSON.parse(box.dataset.alert);
   const open = box.querySelector("[data-alert-open]"), form = box.querySelector("[data-alert-form]"), msg = box.querySelector(".al-msg");
+  const items = d.items || [{ item: d.item, label: d.label, on: true }];
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const holder = box.querySelector("[data-items]");
+  if (holder && items.length > 1) holder.innerHTML = items.map((x, i) => `<label><input type="checkbox" data-i="${i}" ${x.on ? "checked" : ""}> ${esc(d.title && x.label.startsWith(d.title + ": ") ? x.label.slice(d.title.length + 2) : x.label)}</label>`).join("");
   open.addEventListener("click", () => {
     form.hidden = !form.hidden; open.setAttribute("aria-expanded", String(!form.hidden));
     if (!form.hidden) form.querySelector('input[type="email"]').focus();
@@ -199,16 +203,18 @@ document.querySelectorAll("[data-alert]").forEach(box => {
     ev.preventDefault();
     const btn = form.querySelector('button[type="submit"]'); btn.disabled = true;
     const weekly = form.querySelector("[data-weekly]").checked;
+    const pick = holder && items.length > 1 ? items.filter((x, i) => holder.querySelector(`[data-i="${i}"]`).checked) : items;
+    if (!pick.length) { msg.textContent = "Tick at least one alert."; btn.disabled = false; return; }
     try {
       const r = await fetch(d.api + "/watch", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ site: "nintendocritic", item: d.item, label: d.label, weekly, email: form.querySelector('input[type="email"]').value, website: form.website.value }) });
+        body: JSON.stringify({ site: "nintendocritic", title: d.title || items[0].label, items: pick.map(x => ({ item: x.item, label: x.label })), weekly, email: form.querySelector('input[type="email"]').value, website: form.website.value }) });
       const s = (await r.json()).state;
       msg.textContent = { check: "Almost done: check your inbox and click the confirm button.", invalid: "That email address doesn't look right.",
         slow: "You've set a lot of alerts today. Try again tomorrow." }[s] || "Something went wrong. Please try again later.";
       if (s === "check") {
         form.querySelectorAll("input, button").forEach(x => x.disabled = true); msg.classList.add("ok");
         if (weekly) { try { localStorage.setItem("nl-subbed", "1"); } catch (e) {} }
-        if (window.gtag) window.gtag("event", "cart_alert", { game: d.item, weekly });
+        if (window.gtag) window.gtag("event", "game_alert", { items: pick.map(x => x.item).join(","), weekly });
         return;
       }
     } catch (e) { msg.textContent = "Something went wrong. Please try again later."; }
@@ -216,25 +222,50 @@ document.querySelectorAll("[data-alert]").forEach(box => {
   });
 });
 
-// Upgrade calculator (/upgrade-or-buy/): upgrade pack vs Switch 2 Edition for the visitor's situation.
+// Upgrade calculator (/upgrade-or-buy/): upgrade pack vs Switch 2 Edition for the visitor's situation, using the
+// day's US eShop prices (editable), plus an "email me when it's on sale" alert through the newsletter Worker.
 document.querySelectorAll("[data-calc]").forEach(form => {
-  const games = JSON.parse(form.dataset.calc), out = document.querySelector(".calc-out");
+  const D = JSON.parse(form.dataset.calc), games = D.games, out = document.querySelector(".calc-out");
   const f = k => form.querySelector(`[data-k="${k}"]`), num = k => parseFloat(f(k).value);
   const $ = v => "$" + Math.max(0, v).toFixed(2);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const saleBox = document.querySelector("[data-calc-sale]");
   const fill = () => {
     const g = games[+f("game").value];
-    f("up").value = g[1].toFixed(2);
-    f("ed").value = "";
-    f("nso").closest("label").hidden = !g[2];
-    if (!g[2]) f("nso").checked = false;
-    // Price links for the chosen game (Amazon keeps the visitor's store and tag from the top of this file).
-    const q = encodeURIComponent(g[0] + " Nintendo Switch 2 Edition");
-    form.querySelector("[data-eshop]").href = `https://www.nintendo.com/us/search/#q=${q}&cat=gme`;
-    const amz = form.querySelector("[data-amz-calc]");
-    amz.href = (isCanada() ? "https://www.amazon.ca/s?k=" : "https://www.amazon.com/s?k=") + q + "&tag=" + (isCanada() ? "thekitmag-20" : "magpie014-20");
+    f("up").value = g.up.toFixed(2);
+    f("ed").value = g.ed ? g.ed.toFixed(2) : "";
+    f("nso").closest("label").hidden = !g.nso;
+    if (!g.nso) f("nso").checked = false;
+    const src = (u, off, what) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener">Nintendo eShop ↗</a>, checked ${esc(D.checked)}${off ? ` · <b class="on-sale">on sale, ${off}% off</b>` : ""}.` : `${what} not found on the eShop. Enter the price you see.`;
+    form.querySelector("[data-up-src]").innerHTML = src(g.upu, g.upo, "Upgrade pack");
+    form.querySelector("[data-ed-src]").innerHTML = src(g.edu, g.edo, "Switch 2 Edition") + (g.edo ? ` Usually ${$(g.edr)}.` : "");
+    const q = encodeURIComponent(g.n + " Nintendo Switch 2 Edition");
+    form.querySelector("[data-amz-calc]").href = (isCanada() ? "https://www.amazon.ca/s?k=" : "https://www.amazon.com/s?k=") + q + "&tag=" + (isCanada() ? "thekitmag-20" : "magpie014-20");
+    if (saleBox && D.api) {
+      saleBox.innerHTML = `<p><b>Waiting for a sale?</b> We'll email you when ${esc(g.n)}'s Switch 2 Edition or upgrade pack goes on sale on the eShop.</p>
+        <form><label class="sr" for="cs-email">Email address</label><input id="cs-email" type="email" required placeholder="you@example.com" autocomplete="email">
+        <input class="sr" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><button type="submit">Email me</button>
+        <label class="al-weekly"><input type="checkbox" data-weekly> Also send me the free weekly email</label><p class="al-msg" aria-live="polite"></p></form>`;
+      const sf = saleBox.querySelector("form"), msg = saleBox.querySelector(".al-msg");
+      sf.addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const btn = sf.querySelector("button"); btn.disabled = true;
+        const weekly = sf.querySelector("[data-weekly]").checked;
+        try {
+          const r = await fetch(D.api + "/watch", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+            site: "nintendocritic", title: g.n, items: [{ item: "sale-" + g.slug, label: `${g.n}: Switch 2 Edition or upgrade pack on sale` }],
+            weekly, email: sf.querySelector('input[type="email"]').value, website: sf.website.value }) });
+          const s = (await r.json()).state;
+          msg.textContent = { check: "Almost done: check your inbox and click the confirm button.", invalid: "That email address doesn't look right.",
+            slow: "You've set a lot of alerts today. Try again tomorrow." }[s] || "Something went wrong. Please try again later.";
+          if (s === "check") { sf.querySelectorAll("input, button").forEach(x => x.disabled = true); msg.classList.add("ok"); if (window.gtag) window.gtag("event", "sale_alert", { game: g.slug, weekly }); return; }
+        } catch (e) { msg.textContent = "Something went wrong. Please try again later."; }
+        btn.disabled = false;
+      });
+    }
   };
   const want = new URLSearchParams(location.search).get("g");
-  if (want) { const i = games.findIndex(g => g[0].toLowerCase() === want.toLowerCase()); if (i >= 0) f("game").value = i; }
+  if (want) { const i = games.findIndex(g => g.n.toLowerCase() === want.toLowerCase()); if (i >= 0) f("game").value = i; }
   const run = () => {
     const g = games[+f("game").value], own = form.querySelector('input[name="own"]:checked').value;
     form.querySelectorAll("[data-show]").forEach(x => x.hidden = !x.dataset.show.split(" ").includes(own));
@@ -257,7 +288,7 @@ document.querySelectorAll("[data-calc]").forEach(form => {
     out.innerHTML = (best ? `<p class="calc-verdict">${best.n} ${best.n.startsWith("Selling") ? "works out" : "is"} cheaper${other && other.c - best.c >= 0.01 ? ` by <b>${$(other.c - best.c)}</b>` : " (it's a tie)"}.</p>` : "")
       + `<div class="calc-opts">${opts.map(o => `<div class="calc-opt${o === best ? " best" : ""}${o.base ? " base" : ""}"><b>${o === best ? "Best deal · " : ""}${o.t}</b>`
       + `<span class="calc-cost">${o.c === null ? "?" : $(o.c)}</span><span class="sub">${o.why}</span></div>`).join("")}</div>`
-      + (!isNaN(paid) && best && own !== "none" ? `<p class="sub">All in, ${g[0]} will have cost you ${$(paid + best.c)} (${$(paid)} originally + ${$(best.c)} now).</p>` : "");
+      + (!isNaN(paid) && best && own !== "none" ? `<p class="sub">All in, ${esc(g.n)} will have cost you ${$(paid + best.c)} (${$(paid)} originally + ${$(best.c)} now).</p>` : "");
   };
   f("game").addEventListener("change", () => { fill(); run(); });
   form.addEventListener("input", run);

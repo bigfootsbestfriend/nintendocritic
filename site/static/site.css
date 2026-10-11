@@ -389,3 +389,20 @@ a.gcard:hover .t { color: var(--accent); }
 .calc-opt.base { opacity: .8; }
 .calc-cost { font: 800 28px var(--display); }
 .calc-hint { font-weight: 400; font-size: 13px; color: var(--muted); }
+
+/* eShop prices and sales. */
+.price s { color: var(--muted); font-weight: 400; }
+.price.sale b { color: var(--full); }
+.pill.sale { color: var(--gkc); background: var(--gkc-bg); font-size: 12px; padding: 2px 8px; }
+.on-sale { color: var(--full); }
+.deals ul { list-style: none; padding: 0; margin: 10px 0 0; }
+.deals li { padding: 8px 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.al-items { flex-basis: 100%; display: grid; gap: 4px; font-size: 14px; }
+.al-items label { display: flex; gap: 6px; align-items: center; }
+.calc-sale { margin-top: 18px; background: var(--surface); border: 1px dashed var(--accent); border-radius: 12px; padding: 14px 16px; }
+.calc-sale p { margin: 0 0 8px; }
+.calc-sale form { display: flex; flex-wrap: wrap; gap: 8px; }
+.calc-sale input[type=email] { flex: 1 1 200px; min-width: 0; font: 16px var(--body); padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+.calc-sale form button { font: 700 16px var(--body); padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+
+.btn.ghost { background: var(--surface); color: var(--accent); border: 2px solid var(--accent); padding: 10px 18px; margin: 8px 8px 0 0; }

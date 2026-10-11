@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "collector"))
 from common import COMPAT_TABLE, GAMES_TABLE, REVIEWS_TABLE, Airtable, load_env  # noqa: E402
+import eshop  # noqa: E402
 import media  # noqa: E402
 
 # Flip to True when the data has been reviewed and the site should appear in search results.
@@ -98,6 +99,29 @@ CART_KIND = {"Full cartridge": "full", "Game-key card": "gkc", "Code in a box": 
 
 def icon(kind, size=18):
     return f'<svg class="ico" viewBox="0 0 24 24" width="{size}" height="{size}" aria-hidden="true">{ICONS[kind]}</svg>'
+
+
+PRICES = {"checked": None, "upgrades": {}, "games": {}}   # filled by build() from generator/eshop.py
+
+
+def now_price(o):
+    return o.get("sale") or o["price"]
+
+
+def price_html(o):
+    """eShop price, with the regular price struck through during a sale."""
+    if o.get("sale"):
+        return (f'<span class="price sale"><s>${o["price"]:.2f}</s> <b>${o["sale"]:.2f}</b> '
+                f'<span class="pill sale">{round(o["off"])}% off</span></span>')
+    return f'<span class="price">${o["price"]:.2f}</span>'
+
+
+def price_text(o):
+    return f'${o["sale"]:.2f} ({round(o["off"])}% off, usually ${o["price"]:.2f})' if o.get("sale") else f'${o["price"]:.2f}'
+
+
+def checked_on():
+    return fmt_date(PRICES["checked"]) if PRICES.get("checked") else "recently"
 
 
 def icon_bell():
@@ -228,14 +252,19 @@ def game_page(g):
     if NEWSLETTER_API:
         ask = {"full": "Email me if this changes", "gkc": "Email me if it gets a full cartridge",
                "code": "Email me if it gets a cartridge"}.get(CART_KIND.get(cart), "Email me when the cartridge type is confirmed")
-        watch = f'''<div class="alert-box" data-alert='{e(json.dumps({"api": NEWSLETTER_API, "item": g["slug"], "label": name}))}'>
+        items = [{"item": g["slug"], "label": f"{name}: cartridge type changes", "on": True}]
+        if PRICES["games"].get(g["Name"]):
+            items.append({"item": "sale-" + g["slug"], "label": f"{name}: goes on sale on the eShop", "on": True})
+            ask = ask.replace("Email me if this changes", "Email me about sales and changes")
+        watch = f'''<div class="alert-box" data-alert='{e(json.dumps({"api": NEWSLETTER_API, "title": name, "items": items}))}'>
   <button type="button" class="btn-watch" data-alert-open aria-expanded="false">{icon_bell()} {e(ask)}</button>
   <form data-alert-form hidden><label for="al-email" class="sr">Email address</label>
     <input id="al-email" type="email" required placeholder="you@example.com" autocomplete="email">
     <input class="sr" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
     <button type="submit">Set alert</button>
     <label class="al-weekly"><input type="checkbox" data-weekly> Also send me the free weekly email</label>
-    <p class="al-msg" aria-live="polite">One email when {e(name)}'s cartridge type changes. Nothing else unless you tick the box.</p></form>
+    <div class="al-items" data-items></div>
+    <p class="al-msg" aria-live="polite">We only email when one of these happens. Nothing else unless you tick the weekly box.</p></form>
 </div>'''
     head = f'''<section aria-labelledby="g-title">
 <div class="game-head{" has-banner" if banner else ""}"{banner_style}>
@@ -276,6 +305,11 @@ def game_page(g):
         else:
             n = f"${price:.2f} in the US." if price else "Price not confirmed yet." if v == "Paid upgrade pack" else ""
         facts.append(("If you own the Switch 1 version", v, n))
+    shop = PRICES["games"].get(g["Name"])
+    if shop:
+        same = eshop.key(shop["title"]) == eshop.key(g["Name"])
+        facts.append(("Nintendo eShop price", price_text(shop), f"US digital price{'' if same else ' for ' + shop['title']}, "
+                      f"checked {checked_on()}. Sale prices change often."))
     if g.get("Download size GB"):
         facts.append(("Download size", f'{g["Download size GB"]:g} GB', "From the Nintendo eShop listing. Over about 20 GB, you'll likely want a microSD Express card."))
     kind = CART_KIND.get(cart, "tba")
@@ -347,7 +381,9 @@ def game_page(g):
     reviews += (f'<p class="sub" style="margin:12px 0 0">Overall scores: <a href="https://www.metacritic.com/search/{q}/" target="_blank" rel="noopener">Metacritic</a>'
                 f' · <a href="https://opencritic.com/search?criteria={q}" target="_blank" rel="noopener">OpenCritic</a></p></div>')
 
-    buy = (f'<div class="buy">{amz_link(g["Name"], "Check price on Amazon", "btn")}'
+    eshop_btn = (f'<a class="btn ghost" href="{e(shop["url"])}" target="_blank" rel="noopener">eShop: {e(price_text(shop))} ↗</a>'
+                 if (shop := PRICES["games"].get(g["Name"])) else "")
+    buy = (f'<div class="buy">{amz_link(g["Name"], "Check price on Amazon", "btn")}{eshop_btn}'
            '<span class="aff-note">We earn a small commission if you buy through this link, at no cost to you.</span></div>')
 
     src_items = []
@@ -450,7 +486,9 @@ def library_json(games, compat):
     pages = {norm_name(g["Name"]): g["slug"] for g in games if g["has_page"] and g.get("Approved")}
     items = {}
     for u in up["paid"]:
-        items[u["name"]] = {"u": round(u["price"], 2), **({"n": u["note"]} if u.get("note") else {})}
+        o = (PRICES["upgrades"].get(u["name"]) or {}).get("pack")
+        items[u["name"]] = {"u": round(now_price(o) if o else u["price"], 2), **({"n": u["note"]} if u.get("note") else {}),
+                            **({"s": round(o["off"])} if o and o.get("sale") else {})}
     for u in up["free"]:
         items[u["name"]] = {"u": 0}
     for n in up["nintendo_free_updates"]:
@@ -500,7 +538,15 @@ def calc_page():
     up = json.loads((ROOT / "data" / "upgrades.json").read_text())
     games = sorted(up["paid"], key=lambda u: u["name"].lower())
     opts = "".join(f'<option value="{i}">{e(u["name"])}</option>' for i, u in enumerate(games))
-    data = json.dumps([[u["name"], u["price"], 1 if u.get("nso") else 0] for u in games], separators=(",", ":"))
+    rows = []
+    for u in games:
+        live = PRICES["upgrades"].get(u["name"]) or {}
+        pk, ed = live.get("pack"), live.get("edition")
+        rows.append({"n": u["name"], "nso": 1 if u.get("nso") else 0, "slug": slugify(u["name"]),
+                     "up": now_price(pk) if pk else u["price"], "upo": round(pk["off"]) if pk and pk.get("sale") else 0, "upu": pk["url"] if pk else "",
+                     "ed": now_price(ed) if ed else 0, "edr": ed["price"] if ed else 0, "edo": round(ed["off"]) if ed and ed.get("sale") else 0,
+                     "edu": ed["url"] if ed else ""})
+    data = json.dumps({"games": rows, "checked": checked_on(), "api": NEWSLETTER_API}, separators=(",", ":"))
     qas = [
         ("Should I buy the upgrade pack or the Switch 2 Edition?",
          "If you already own the Switch 1 version digitally, the upgrade pack is almost always cheaper. If you own a "
@@ -515,7 +561,7 @@ def calc_page():
          "a steadier frame rate or new content, depending on the game."),
     ]
     body = f'''<section aria-labelledby="k-title">
-<div class="eyebrow">Upgrade calculator · Upgrade prices checked {fmt_date(up["checked"])}</div>
+<div class="eyebrow">Upgrade calculator · eShop prices checked {checked_on()}</div>
 <h1 id="k-title">Upgrade pack or Switch 2 Edition: which costs less?</h1>
 <p class="lede">Pick a game and tell us what you own. We'll work out whether the upgrade pack or the Switch 2 Edition is
 the better deal for you.</p>
@@ -528,15 +574,16 @@ the better deal for you.</p>
   <label data-show="physical">What you could sell your copy for <span class="calc-in">$<input data-k="resale" type="number" min="0" step="0.01" inputmode="decimal" placeholder="25.00"></span></label>
   <label data-show="none">Switch 1 version price <span class="calc-in">$<input data-k="s1" type="number" min="0" step="0.01" inputmode="decimal" placeholder="59.99"></span></label>
   <label>Upgrade pack price <span class="calc-in">$<input data-k="up" type="number" min="0" step="0.01" inputmode="decimal"></span>
-    <span class="calc-hint">US eShop price when we checked on {fmt_date(up["checked"])}. Change it if it's different now.</span></label>
+    <span class="calc-hint" data-up-src></span></label>
   <label>Switch 2 Edition price today <span class="calc-in">$<input data-k="ed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Enter the price you see"></span>
-    <span class="calc-hint">Prices change with sales. Check: <a data-eshop target="_blank" rel="noopener" href="https://www.nintendo.com/us/store/">Nintendo eShop ↗</a> · <a data-amz data-amz-calc target="_blank" rel="sponsored noopener" href="{amazon("")}">Amazon ↗</a></span></label>
+    <span class="calc-hint"><span data-ed-src></span> Boxed copy: <a data-amz data-amz-calc target="_blank" rel="sponsored noopener" href="{amazon("")}">Amazon ↗</a></span></label>
   <label class="calc-wide check"><input type="checkbox" data-k="nso"> I have Nintendo Switch Online + Expansion Pack</label>
   <label data-show="physical digital">What you paid for it originally (optional) <span class="calc-in">$<input data-k="paid" type="number" min="0" step="0.01" inputmode="decimal"></span></label>
 </form>
 <div class="calc-out" aria-live="polite"></div>
-<p class="sub">Prices change often, especially during sales, so the calculator uses the prices you enter. We fill in only
-the upgrade pack price from our <a href="/upgrades/">upgrade list</a>.</p>
+<div class="calc-sale" data-calc-sale></div>
+<p class="sub">Prices are filled in from the US Nintendo eShop each day, including sales. Change any of them to match what
+you see, for example a boxed copy at a store.</p>
 {faq_block(qas)}
 </section>
 {signup("calc")}'''
@@ -563,6 +610,10 @@ def upgrades_page(games):
     data = json.loads((ROOT / "data" / "upgrades.json").read_text())
     pages = {norm_name(g["Name"]): g for g in games if g["has_page"]}
 
+    def pack_cell(u):
+        o = (PRICES["upgrades"].get(u["name"]) or {}).get("pack")
+        return price_html(o) if o else f'${u["price"]:.2f}'
+
     def name_cell(u):
         g = pages.get(norm_name(u["name"]))
         n = f'<a href="/games/{g["slug"]}/">{e(u["name"])}</a>' if g else e(u["name"])
@@ -571,8 +622,19 @@ def upgrades_page(games):
     paid = sorted(data["paid"], key=lambda u: (-u["price"], u["name"].lower()))
     paid_rows = "".join(
         f'<tr data-q="{e(u["name"].lower())}" data-kind="{"nin" if u.get("nintendo") else "x"}">'
-        f'<td class="game">{name_cell(u)}</td><td class="num">${u["price"]:.2f}</td><td>{e(u.get("note", ""))}</td></tr>'
+        f'<td class="game">{name_cell(u)}</td><td class="num">{pack_cell(u)}</td><td>{e(u.get("note", ""))}</td></tr>'
         for u in paid)
+    deals = []
+    for u in paid:
+        live = PRICES["upgrades"].get(u["name"]) or {}
+        for what, o in (("Switch 2 Edition", live.get("edition")), ("Upgrade pack", live.get("pack"))):
+            if o and o.get("sale"):
+                deals.append((-o["off"], f'<li><a href="{e(o["url"])}" target="_blank" rel="noopener">{e(u["name"])}</a> · {what} {price_html(o)}</li>'))
+    deals.sort(key=lambda x: x[0])
+    more = f'<p class="sub">Plus {len(deals) - 10} more upgrade deals on the eShop.</p>' if len(deals) > 10 else ""
+    deals = [x[1] for x in deals[:10]]
+    deals_html = (f'<div class="panel deals"><h2>Biggest upgrade deals right now</h2><p class="sub">Nintendo eShop US prices, checked {checked_on()}. '
+                  f'Sales end without warning, so check the eShop before you buy.</p><ul>{"".join(deals)}</ul>{more}</div>' if deals else "")
     free = sorted(data["free"], key=lambda u: u["name"].lower())
     free_rows = "".join(f'<tr data-q="{e(u["name"].lower())}" data-kind="free"><td class="game">{name_cell(u)}</td>'
                         f'<td class="num">Free</td><td></td></tr>' for u in free)
@@ -614,7 +676,8 @@ ${cheapest:.2f} to ${dearest:.2f}, and {len(free)} games that upgrade for free.<
   <tbody>{paid_rows}{free_rows}</tbody></table>
   <div class="empty" hidden>No games match. Try a shorter search.</div>
 </div>
-<div class="count">{len(paid)} paid upgrade packs · {len(free)} free upgrades<span data-count></span></div>
+<div class="count">{len(paid)} paid upgrade packs · {len(free)} free upgrades<span data-count></span> · eShop prices checked {checked_on()}</div>
+{deals_html}
 <p class="lib-cta"><a href="/my-switch-library/">Check your whole library →</a> Add the games you own and see what upgrading them all would cost.</p>
 <p class="lib-cta"><a href="/upgrade-or-buy/">Upgrade pack or Switch 2 Edition? →</a> Our calculator works out which costs you less.</p>
 <div class="panel"><h2>Free Switch 2 updates for Nintendo's own games</h2>
@@ -930,9 +993,9 @@ PRIVACY_NEWSLETTER = """<h2>Weekly email</h2>
 the service that sends the email, and use it only to send the weekly email. We ask you to confirm by clicking a link
 first. Every email has a one-click unsubscribe link, and we never sell or share the list.</p>
 <h2>Game alerts</h2>
-<p>If you ask us to email you when a game's cartridge type changes, we store your email address and that game on our
+<p>If you ask us to email you when a game's cartridge type changes or it goes on sale, we store your email address and that game on our
 own server (Cloudflare) until you turn the alert off with the link in the email. We ask you to confirm first, and we
-only use it to send that alert.</p>
+only use it to send those alerts. Prices come from the public Nintendo eShop listings.</p>
 """
 
 
@@ -957,6 +1020,8 @@ def not_found_page():
 
 def build(out, preview):
     games, compat = load(preview)
+    up_names = [u["name"] for u in json.loads((ROOT / "data" / "upgrades.json").read_text())["paid"]]
+    PRICES.update(eshop.fetch(up_names, [g["Name"] for g in games if g["has_page"]]))
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(ROOT / "site" / "static", out / "static")
@@ -993,6 +1058,8 @@ def build(out, preview):
     (out / "newsletter.json").write_text(newsletter_json(games))
     (out / "static" / "games.json").write_text(search_index(games))
     (out / "static" / "library.json").write_text(library_json(games, compat))
+    prices_out = dict(PRICES, slugs={g["Name"]: g["slug"] for g in games if g.get("Approved")})
+    (out / "static" / "prices.json").write_text(json.dumps(prices_out, ensure_ascii=False, separators=(",", ":")))
     # What each game page says about its box; collector/cart_alerts.py compares the live copy with the new one.
     (out / "static" / "carts.json").write_text(json.dumps(
         {g["slug"]: [g["Name"], g.get("Cartridge") or ""] for g in games if g.get("Approved")}, ensure_ascii=False, separators=(",", ":")))
