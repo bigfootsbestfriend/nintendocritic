@@ -117,7 +117,7 @@ def cover(g, size="t_cover_big", w=264, h=352, cls="cover"):
 def signup(uid):
     if not NEWSLETTER_API:
         return ""
-    return f'''<div class="signup">
+    return f'''<div class="signup" id="signup" data-bar="New Switch 2 releases, game-key cards and fixes, once a week">
   <h2>Know what's in the box before you buy</h2>
   <p>One email a week: new Switch 2 releases, which ones are game-key cards, and compatibility fixes. Unsubscribe anytime.</p>
   <form action="{e(NEWSLETTER_API)}/subscribe" method="post"><input type="hidden" name="site" value="nintendocritic"><input class="sr" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><label for="email-{uid}" class="sr">Email address</label><input id="email-{uid}" name="email" type="email" required placeholder="you@example.com" autocomplete="email"><button type="submit">Sign me up</button></form>
@@ -218,6 +218,12 @@ def game_page(g):
     banner_style = f' style="--banner:url({media.img(banner, "t_1080p")})"' if banner else ""
     label = (f'<img src="{media.img(g["cover"], "t_cover_big")}" width="264" height="352" alt="{e(name)} box art">'
              if g["cover"] else f'<small>SWITCH 2</small><b>{e(name)}</b>')
+    watch = ""
+    if NEWSLETTER_API:
+        ask = (f"Tell me when {name}'s cartridge is confirmed" if cart not in CART_KIND
+               else "Get new releases and Switch 2 fixes")
+        watch = (f'<p class="watch"><button type="button" class="btn-watch" data-signup>{e(ask)}</button> '
+                 f'<span>in our free weekly email</span></p>')
     head = f'''<section aria-labelledby="g-title">
 <div class="game-head{" has-banner" if banner else ""}"{banner_style}>
   <div class="cart{" has-cover" if g["cover"] else ""}"><div class="label">{label}</div><div class="pins" aria-hidden="true"></div></div>
@@ -225,7 +231,7 @@ def game_page(g):
     <div class="eyebrow">Switch 2 game check{" · " + e(g["Publisher"]) if g.get("Publisher") else ""} · Updated {updated}</div>
     <h1 id="g-title">{e(title_name)}</h1>
     <p class="lede">Is it a full cartridge? Does it run better? Should you buy it again? Everything to know before you buy.</p>
-    <p style="margin:14px 0 0">{badge(cart)}</p>
+    <p style="margin:14px 0 0">{badge(cart)}</p>{watch}
   </div>
 </div>'''
 
@@ -355,7 +361,7 @@ def game_page(g):
               "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in qas]},
               ensure_ascii=False) + "</script>")
 
-    body = head + facts_html + worth + media_html + notes + perf + reviews + buy + signup("game") + sources + schema + "</section>"
+    body = head + facts_html + worth + signup("game") + media_html + notes + perf + reviews + buy + sources + schema + "</section>"
     desc = f"Is {name} a game-key card or a full cartridge on Switch 2? Release date, upgrade path, performance and reviews."
     return page(f"/games/{g['slug']}/", f"{title_name}: game-key card, upgrade and reviews | Nintendo Critic", desc, body,
                 index=bool(g.get("Approved")))
