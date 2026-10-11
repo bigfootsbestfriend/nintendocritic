@@ -500,7 +500,7 @@ def calc_page():
     up = json.loads((ROOT / "data" / "upgrades.json").read_text())
     games = sorted(up["paid"], key=lambda u: u["name"].lower())
     opts = "".join(f'<option value="{i}">{e(u["name"])}</option>' for i, u in enumerate(games))
-    data = json.dumps([[u["name"], u["price"], u.get("edition_price") or 0, 1 if u.get("nso") else 0] for u in games], separators=(",", ":"))
+    data = json.dumps([[u["name"], u["price"], 1 if u.get("nso") else 0] for u in games], separators=(",", ":"))
     qas = [
         ("Should I buy the upgrade pack or the Switch 2 Edition?",
          "If you already own the Switch 1 version digitally, the upgrade pack is almost always cheaper. If you own a "
@@ -527,14 +527,16 @@ the better deal for you.</p>
     <label><input type="radio" name="own" value="none"> Not yet</label></fieldset>
   <label data-show="physical">What you could sell your copy for <span class="calc-in">$<input data-k="resale" type="number" min="0" step="0.01" inputmode="decimal" placeholder="25.00"></span></label>
   <label data-show="none">Switch 1 version price <span class="calc-in">$<input data-k="s1" type="number" min="0" step="0.01" inputmode="decimal" placeholder="59.99"></span></label>
-  <label>Upgrade pack price <span class="calc-in">$<input data-k="up" type="number" min="0" step="0.01" inputmode="decimal"></span></label>
-  <label>Switch 2 Edition price <span class="calc-in">$<input data-k="ed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Check the eShop"></span></label>
+  <label>Upgrade pack price <span class="calc-in">$<input data-k="up" type="number" min="0" step="0.01" inputmode="decimal"></span>
+    <span class="calc-hint">US eShop price when we checked on {fmt_date(up["checked"])}. Change it if it's different now.</span></label>
+  <label>Switch 2 Edition price today <span class="calc-in">$<input data-k="ed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Enter the price you see"></span>
+    <span class="calc-hint">Prices change with sales. Check: <a data-eshop target="_blank" rel="noopener" href="https://www.nintendo.com/us/store/">Nintendo eShop ↗</a> · <a data-amz data-amz-calc target="_blank" rel="sponsored noopener" href="{amazon("")}">Amazon ↗</a></span></label>
   <label class="calc-wide check"><input type="checkbox" data-k="nso"> I have Nintendo Switch Online + Expansion Pack</label>
   <label data-show="physical digital">What you paid for it originally (optional) <span class="calc-in">$<input data-k="paid" type="number" min="0" step="0.01" inputmode="decimal"></span></label>
 </form>
 <div class="calc-out" aria-live="polite"></div>
-<p class="sub">Prices are US list prices; edit any of them to match what you see, including sales. Switch 2 Edition list
-prices are filled in where we know them.</p>
+<p class="sub">Prices change often, especially during sales, so the calculator uses the prices you enter. We fill in only
+the upgrade pack price from our <a href="/upgrades/">upgrade list</a>.</p>
 {faq_block(qas)}
 </section>
 {signup("calc")}'''

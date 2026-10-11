@@ -388,3 +388,4 @@ a.gcard:hover .t { color: var(--accent); }
 .calc-opt.best { border-color: var(--full); box-shadow: 0 0 0 2px var(--full) inset; }
 .calc-opt.base { opacity: .8; }
 .calc-cost { font: 800 28px var(--display); }
+.calc-hint { font-weight: 400; font-size: 13px; color: var(--muted); }

@@ -224,9 +224,14 @@ document.querySelectorAll("[data-calc]").forEach(form => {
   const fill = () => {
     const g = games[+f("game").value];
     f("up").value = g[1].toFixed(2);
-    f("ed").value = g[2] ? g[2].toFixed(2) : "";
-    f("nso").closest("label").hidden = !g[3];
-    if (!g[3]) f("nso").checked = false;
+    f("ed").value = "";
+    f("nso").closest("label").hidden = !g[2];
+    if (!g[2]) f("nso").checked = false;
+    // Price links for the chosen game (Amazon keeps the visitor's store and tag from the top of this file).
+    const q = encodeURIComponent(g[0] + " Nintendo Switch 2 Edition");
+    form.querySelector("[data-eshop]").href = `https://www.nintendo.com/us/search/#q=${q}&cat=gme`;
+    const amz = form.querySelector("[data-amz-calc]");
+    amz.href = (isCanada() ? "https://www.amazon.ca/s?k=" : "https://www.amazon.com/s?k=") + q + "&tag=" + (isCanada() ? "thekitmag-20" : "magpie014-20");
   };
   const want = new URLSearchParams(location.search).get("g");
   if (want) { const i = games.findIndex(g => g[0].toLowerCase() === want.toLowerCase()); if (i >= 0) f("game").value = i; }
