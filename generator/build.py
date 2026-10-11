@@ -495,6 +495,54 @@ for free, and which have known problems on Switch 2.</p>
                 "and which have known problems on Switch 2.", body, "/my-switch-library/")
 
 
+def calc_page():
+    """Upgrade pack or Switch 2 Edition? A calculator over the paid upgrades in data/upgrades.json."""
+    up = json.loads((ROOT / "data" / "upgrades.json").read_text())
+    games = sorted(up["paid"], key=lambda u: u["name"].lower())
+    opts = "".join(f'<option value="{i}">{e(u["name"])}</option>' for i, u in enumerate(games))
+    data = json.dumps([[u["name"], u["price"], u.get("edition_price") or 0, 1 if u.get("nso") else 0] for u in games], separators=(",", ":"))
+    qas = [
+        ("Should I buy the upgrade pack or the Switch 2 Edition?",
+         "If you already own the Switch 1 version digitally, the upgrade pack is almost always cheaper. If you own a "
+         "physical copy, selling it and buying the Switch 2 Edition can cost less than the pack, and you're not tied to "
+         "keeping the old cartridge in the console. If you don't own the game yet, compare the Switch 1 price plus the "
+         "pack against the Switch 2 Edition."),
+        ("Do I need the Switch 1 cartridge to play an upgraded game?",
+         "Yes. An upgrade pack unlocks the Switch 2 version, but with a physical Switch 1 copy the cartridge has to be in "
+         "the console to play it. Digital copies don't have that problem."),
+        ("Do I have to upgrade at all?",
+         "No. Nearly every Switch 1 game runs on Switch 2 as it is. The upgrade adds things like sharper resolution, "
+         "a steadier frame rate or new content, depending on the game."),
+    ]
+    body = f'''<section aria-labelledby="k-title">
+<div class="eyebrow">Upgrade calculator · Upgrade prices checked {fmt_date(up["checked"])}</div>
+<h1 id="k-title">Upgrade pack or Switch 2 Edition: which costs less?</h1>
+<p class="lede">Pick a game and tell us what you own. We'll work out whether the upgrade pack or the Switch 2 Edition is
+the better deal for you.</p>
+<form class="calc" data-calc='{e(data)}' onsubmit="return false">
+  <label class="calc-wide">Game <select data-k="game">{opts}</select></label>
+  <fieldset class="calc-wide"><legend>Do you own the Switch 1 version?</legend>
+    <label><input type="radio" name="own" value="physical" checked> Yes, a physical copy</label>
+    <label><input type="radio" name="own" value="digital"> Yes, digital</label>
+    <label><input type="radio" name="own" value="none"> Not yet</label></fieldset>
+  <label data-show="physical">What you could sell your copy for <span class="calc-in">$<input data-k="resale" type="number" min="0" step="0.01" inputmode="decimal" placeholder="25.00"></span></label>
+  <label data-show="none">Switch 1 version price <span class="calc-in">$<input data-k="s1" type="number" min="0" step="0.01" inputmode="decimal" placeholder="59.99"></span></label>
+  <label>Upgrade pack price <span class="calc-in">$<input data-k="up" type="number" min="0" step="0.01" inputmode="decimal"></span></label>
+  <label>Switch 2 Edition price <span class="calc-in">$<input data-k="ed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Check the eShop"></span></label>
+  <label class="calc-wide check"><input type="checkbox" data-k="nso"> I have Nintendo Switch Online + Expansion Pack</label>
+  <label data-show="physical digital">What you paid for it originally (optional) <span class="calc-in">$<input data-k="paid" type="number" min="0" step="0.01" inputmode="decimal"></span></label>
+</form>
+<div class="calc-out" aria-live="polite"></div>
+<p class="sub">Prices are US list prices; edit any of them to match what you see, including sales. Switch 2 Edition list
+prices are filled in where we know them.</p>
+{faq_block(qas)}
+</section>
+{signup("calc")}'''
+    return page("/upgrade-or-buy/", "Switch 2 upgrade calculator: upgrade pack or Switch 2 Edition? | Nintendo Critic",
+                "Own a Switch 1 game? Work out whether the Switch 2 upgrade pack or the Switch 2 Edition costs you less, "
+                "including what your old copy would sell for.", body, None)
+
+
 def faq_block(qas):
     """Visible Q&A plus FAQPage schema. qas: [(question, answer_text)]."""
     items = "".join(f'<h3>{e(q)}</h3><p>{e(a)}</p>' for q, a in qas)
@@ -566,6 +614,7 @@ ${cheapest:.2f} to ${dearest:.2f}, and {len(free)} games that upgrade for free.<
 </div>
 <div class="count">{len(paid)} paid upgrade packs · {len(free)} free upgrades<span data-count></span></div>
 <p class="lib-cta"><a href="/my-switch-library/">Check your whole library →</a> Add the games you own and see what upgrading them all would cost.</p>
+<p class="lib-cta"><a href="/upgrade-or-buy/">Upgrade pack or Switch 2 Edition? →</a> Our calculator works out which costs you less.</p>
 <div class="panel"><h2>Free Switch 2 updates for Nintendo's own games</h2>
 <p>These Switch 1 games got a free update that improves them on Switch 2, such as sharper resolution, a steadier frame
 rate or HDR, depending on the game: {e(nin_free)}.</p>
@@ -694,6 +743,8 @@ def radar_page(games):
 
 
 HUB_ICONS = {
+    "calc": '<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+            '<path d="M8 7h8M8.5 11.5h1M11.5 11.5h1M14.5 11.5h1M8.5 15h1M11.5 15h1M14.5 15h1M8.5 18h1M11.5 18h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
     "lib": '<rect x="3.5" y="5" width="4" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>'
            '<rect x="9.5" y="5" width="4" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>'
            '<path d="M15.6 6.2l3.6-1 3 13.4-3.6 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
@@ -743,6 +794,7 @@ def home_page(games, compat):
   <a href="/my-switch-library/" class="hub-new">{hub_icon("lib")}<b>Check your library</b><span>Add your Switch 1 games: see upgrades, prices and problems in one go.</span></a>
   <a href="/game-key-cards/">{icon("gkc", 34)}<b>Game-key cards</b><span>Which boxed games make you download first.</span></a>
   <a href="/compatibility/">{hub_icon("compat")}<b>Switch 1 compatibility</b><span>The {len(compat)} games and apps with known problems on Switch 2.</span></a>
+  <a href="/upgrade-or-buy/">{hub_icon("calc")}<b>Upgrade or rebuy?</b><span>Work out whether the upgrade pack or the Switch 2 Edition costs you less.</span></a>
   <a href="/upgrades/">{hub_icon("up")}<b>Switch 2 Editions</b><span>{eds} upgrades: what they cost and what improves.</span></a>
   <a href="/coming-soon/">{hub_icon("cal")}<b>Coming soon</b><span>Every upcoming Switch 2 release, with dates.</span></a>
 </div>
@@ -914,6 +966,7 @@ def build(out, preview):
         "compatibility/index.html": compat_page(compat),
         "upgrades/index.html": upgrades_page(games),
         "my-switch-library/index.html": library_page(),
+        "upgrade-or-buy/index.html": calc_page(),
         "coming-soon/index.html": radar_page(games),
         "about/index.html": about_page(games),
         "is-switch-2-worth-it/index.html": worth_it_page(games, compat),

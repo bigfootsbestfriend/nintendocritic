@@ -14,7 +14,8 @@
   {
    "name": "Animal Crossing: New Horizons",
    "price": 4.99,
-   "nintendo": true
+   "nintendo": true,
+   "edition_price": 64.99
   },
   {
    "name": "Another Eden Begins",
@@ -135,7 +136,8 @@
    "name": "Kirby and the Forgotten Land",
    "price": 19.99,
    "nintendo": true,
-   "note": "Switch 2 Edition plus the new Star-Crossed World adventure."
+   "note": "Switch 2 Edition plus the new Star-Crossed World adventure.",
+   "edition_price": 79.99
   },
   {
    "name": "Inazuma Eleven: Victory Road",
@@ -266,7 +268,8 @@
    "name": "Super Mario Party Jamboree",
    "price": 19.99,
    "nintendo": true,
-   "note": "Switch 2 Edition plus Jamboree TV, which adds camera and microphone games."
+   "note": "Switch 2 Edition plus Jamboree TV, which adds camera and microphone games.",
+   "edition_price": 79.99
   },
   {
    "name": "Tamagotchi Plaza",
@@ -303,14 +306,16 @@
    "price": 9.99,
    "nintendo": true,
    "note": "Switch 2 Edition. Free with Nintendo Switch Online + Expansion Pack.",
-   "nso": true
+   "nso": true,
+   "edition_price": 69.99
   },
   {
    "name": "The Legend of Zelda: Tears of the Kingdom",
    "price": 9.99,
    "nintendo": true,
    "note": "Switch 2 Edition. Free with Nintendo Switch Online + Expansion Pack.",
-   "nso": true
+   "nso": true,
+   "edition_price": 79.99
   },
   {
    "name": "Touhou Yukkuri Mountain",

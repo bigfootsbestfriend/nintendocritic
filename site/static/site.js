@@ -126,7 +126,7 @@ document.querySelectorAll("[data-lib]").forEach(async box => {
     mine.forEach(n => {
       const it = find(n), label = link(it) || esc(n);
       if (it && it.c && it.cc !== "full") g.bad.push(`<li>${label} <span class="pill ${it.cc}">${esc(it.c)}</span>${it.cd ? `<span class="lib-note">${esc(it.cd)}</span>` : ""}</li>`);
-      if (it && it.u > 0) g.paid.push([it.u, `<li>${label} <b class="lib-price">${price(it.u)}</b>${it.n ? `<span class="lib-note">${esc(it.n)}</span>` : ""}</li>`]);
+      if (it && it.u > 0) g.paid.push([it.u, `<li>${label} <b class="lib-price">${price(it.u)}</b>${it.n ? `<span class="lib-note">${esc(it.n)}</span>` : ""}<a class="lib-note" href="/upgrade-or-buy/?g=${encodeURIComponent(it.name)}">Upgrade or rebuy? Compare →</a></li>`]);
       else if (it && (it.u === 0 || it.fu)) g.free.push(`<li>${label} <span class="pill full">${it.u === 0 ? "Free upgrade" : "Free update"}</span></li>`);
       else if (!(it && it.c && it.cc !== "full")) g.fine.push(`<li>${label}${it && it.c ? ` <span class="pill full">${esc(it.c)}</span>` : ""}</li>`);
     });
@@ -214,6 +214,49 @@ document.querySelectorAll("[data-alert]").forEach(box => {
     } catch (e) { msg.textContent = "Something went wrong. Please try again later."; }
     btn.disabled = false;
   });
+});
+
+// Upgrade calculator (/upgrade-or-buy/): upgrade pack vs Switch 2 Edition for the visitor's situation.
+document.querySelectorAll("[data-calc]").forEach(form => {
+  const games = JSON.parse(form.dataset.calc), out = document.querySelector(".calc-out");
+  const f = k => form.querySelector(`[data-k="${k}"]`), num = k => parseFloat(f(k).value);
+  const $ = v => "$" + Math.max(0, v).toFixed(2);
+  const fill = () => {
+    const g = games[+f("game").value];
+    f("up").value = g[1].toFixed(2);
+    f("ed").value = g[2] ? g[2].toFixed(2) : "";
+    f("nso").closest("label").hidden = !g[3];
+    if (!g[3]) f("nso").checked = false;
+  };
+  const want = new URLSearchParams(location.search).get("g");
+  if (want) { const i = games.findIndex(g => g[0].toLowerCase() === want.toLowerCase()); if (i >= 0) f("game").value = i; }
+  const run = () => {
+    const g = games[+f("game").value], own = form.querySelector('input[name="own"]:checked').value;
+    form.querySelectorAll("[data-show]").forEach(x => x.hidden = !x.dataset.show.split(" ").includes(own));
+    const up = f("nso").checked ? 0 : (num("up") || 0), ed = num("ed"), resale = num("resale") || 0, s1 = num("s1"), paid = num("paid");
+    const opts = [];
+    if (own === "none") {
+      if (isNaN(s1)) opts.push({ t: "Switch 1 version + upgrade pack", n: "The Switch 1 version plus the pack", c: null, why: "Add the Switch 1 price to compare." });
+      else opts.push({ t: "Switch 1 version + upgrade pack", n: "The Switch 1 version plus the pack", c: s1 + up, why: `${$(s1)} + ${$(up)} for the pack.` });
+    } else {
+      opts.push({ t: "Buy the upgrade pack", n: "The upgrade pack", c: up, why: f("nso").checked ? "Included with your Expansion Pack." :
+        own === "physical" ? "Keep the Switch 1 cartridge: it has to be in the console to play." : "Unlocks the Switch 2 version of your digital copy." });
+    }
+    if (isNaN(ed)) opts.push({ t: own === "physical" ? "Sell your copy, buy the Switch 2 Edition" : "Buy the Switch 2 Edition", n: "", c: null, why: "Add the Switch 2 Edition price to compare." });
+    else if (own === "physical") opts.push({ t: "Sell your copy, buy the Switch 2 Edition", n: "Selling your copy and buying the Switch 2 Edition", c: ed - resale, why: resale ? `${$(ed)} minus ${$(resale)} from selling your copy.` : `${$(ed)}. Add what your copy would sell for to see the real cost.` });
+    else opts.push({ t: "Buy the Switch 2 Edition", n: "The Switch 2 Edition", c: ed, why: own === "digital" ? "Digital copies can't be resold, so this means paying twice." : "No old copy needed." });
+    if (own !== "none") opts.push({ t: "Keep playing the Switch 1 version", c: 0, why: "It runs on Switch 2, just without the Switch 2 improvements.", base: true });
+    const real = opts.filter(o => o.c !== null && !o.base);
+    const best = real.length > 1 ? real.reduce((a, b) => (b.c < a.c ? b : a)) : null;
+    const other = best && real.find(o => o !== best);
+    out.innerHTML = (best ? `<p class="calc-verdict">${best.n} ${best.n.startsWith("Selling") ? "works out" : "is"} cheaper${other && other.c - best.c >= 0.01 ? ` by <b>${$(other.c - best.c)}</b>` : " (it's a tie)"}.</p>` : "")
+      + `<div class="calc-opts">${opts.map(o => `<div class="calc-opt${o === best ? " best" : ""}${o.base ? " base" : ""}"><b>${o === best ? "Best deal · " : ""}${o.t}</b>`
+      + `<span class="calc-cost">${o.c === null ? "?" : $(o.c)}</span><span class="sub">${o.why}</span></div>`).join("")}</div>`
+      + (!isNaN(paid) && best && own !== "none" ? `<p class="sub">All in, ${g[0]} will have cost you ${$(paid + best.c)} (${$(paid)} originally + ${$(best.c)} now).</p>` : "");
+  };
+  f("game").addEventListener("change", () => { fill(); run(); });
+  form.addEventListener("input", run);
+  fill(); run();
 });
 
 // Email signup prompts: "Tell me…" buttons open the signup box, and a small bar offers it once after a while
