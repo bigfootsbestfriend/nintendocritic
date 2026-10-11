@@ -65,21 +65,41 @@ Mike decided: no standalone reviews. Instead:
   Mike's first-hand parts come from `content/worth-it.json` (short_answer, my_experience, worth_it_if, wait_if); empty
   fields are left off the page.
 
-## Waiting on Mike
+## Waiting on Mike (as of 2026-10-11)
 
-1. **A second, free Kit account** just for Nintendo Critic, separate from the Kitchen Magpie account so it doesn't inflate those numbers.
-   - Sign up with e.g. `hello@nintendocritic.com`, set up through Namecheap's free email forwarding.
-   - Create an API key and add it as the `KIT_API_KEY` repo secret.
-   - The claude.ai Kit connector is the **Magpie** account. Don't use it for this.
-2. **Namecheap DNS**, done in one sitting once the site exists: GitHub Pages records plus Kit's sending-domain records.
+1. **Approve games and launch.** Game pages only exist for Airtable rows with `Approved` ticked; the site stays noindex
+   until `LAUNCHED = True` in generator/build.py. Review, approve, then flip it and push.
+2. **Your first-hand text** for /is-switch-2-worth-it/ goes in content/worth-it.json (empty), and "We played it" notes in Airtable.
+3. **Weekly email sending:** the newsletter repo's sites.json still has `"mode": "draft"`; switch to "send" when happy.
+4. **Optional, Amazon prices:** only via Amazon's Product Advertising API with your Associates keys (never scraped).
+   Create them in Associates Central → Tools → Product Advertising API and save them in a local file, not chat.
+(Email is Resend, not Kit; DNS is on Cloudflare. The old Kit/Namecheap items are done or superseded.)
 
 ## Next steps, in order
 
-1. **Nintendo checks:**
-   - the compatibility list (status changes go to the Change log)
-   - store listings: the game-key card badge → Cartridge confidence "Store badge", plus download size
-2. **Review feeds:** RSS from Nintendo Life, Nintendo World Report and Nintendo Everything → the Reviews table (link and score only, summaries written in our own words).
-4. **Scheduled Claude Code task** (runs on the Max plan, no API key): drafts verdicts and review summaries, and the weekly email draft in the new Kit account. Mike presses Send.
+1. Nintendo checks: the compatibility list (status changes go to the Change log), store listings (game-key card badge → "Store badge", download size).
+2. Scheduled Claude Code routine (Max plan, no API key): drafts verdicts and review summaries.
+3. Re-check the price source (generator/eshop.py) if a build prints "eShop prices unavailable".
+
+## Tools, live prices and alerts (2026-10-10/11)
+
+- **/my-switch-library/** library checker: visitors add their Switch 1 games (autocomplete from data/switch1.json, ~3,000
+  IGDB names; refresh with `python3 collector/switch1_list.py`) and see known problems, paid upgrades with a total,
+  free upgrades, and games that run as they are. Saved in localStorage `nc-library`; shareable `?g=` links.
+- **/upgrade-or-buy/** calculator: upgrade pack vs Switch 2 Edition for a physical copy, digital copy or none.
+- **Live Nintendo eShop prices** (generator/eshop.py): each build queries the public search index nintendo.com's own
+  store search uses (Algolia app U3B6GR4UA3, read-only key). Not an official API, so failures are soft: the build falls
+  back to the live site's static/prices.json. Prices appear on game pages (fact + eShop button), /upgrades/ (live pack
+  prices + "Biggest upgrade deals right now", top 10 by discount), the library checker and the calculator (prefilled, cited, editable).
+  Mike, 2026-10-10: don't hard-code prices; they change too easily.
+- **Alerts by email** (newsletter Worker /watch, D1, double opt-in, stop link in every email):
+  - game pages: "cartridge type changes" (item = slug) and "goes on sale" (item = `sale-<slug>`)
+  - calculator: "Waiting for a sale?" (item = `sale-<slugify(name)>`)
+  - pages.yml saves the live static/carts.json and static/prices.json before deploying, then runs
+    collector/cart_alerts.py (max 15 changes/run) and collector/sale_alerts.py (max 40) against the new build.
+    Each (item, change) is sent once. Secret: NEWSLETTER_ADMIN_TOKEN (local copy in ~/.config/kitchen-magpie/newsletter.env).
+- **Email prompts:** "tell me" alert button near the top of game pages, signup box right after the verdict, one
+  dismissible bottom bar (14-day cooldown).
 
 ## Running locally
 
