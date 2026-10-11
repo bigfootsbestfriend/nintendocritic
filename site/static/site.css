@@ -314,7 +314,6 @@ a.gcard:hover .t { color: var(--accent); }
 .watch { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14px; color: var(--muted); }
 .btn-watch { font: 700 15px var(--body); padding: 8px 14px; border-radius: 999px; border: 2px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; }
 .btn-watch:hover { background: var(--accent); color: var(--accent-ink); }
-.has-banner .watch { color: inherit; opacity: .85; }
 .signup { scroll-margin-top: 90px; }
 .signup.flash { animation: nl-flash 1.2s ease-out; }
 @keyframes nl-flash { 0% { box-shadow: 0 0 0 0 var(--gold); } 30% { box-shadow: 0 0 0 6px var(--gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
@@ -359,3 +358,14 @@ a.gcard:hover .t { color: var(--accent); }
 .lib-empty { color: var(--muted); }
 .lib-cta { margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: var(--code-bg); }
 .lib-cta a { font-weight: 700; }
+
+/* Cartridge alert (game pages). */
+.alert-box { margin-top: 14px; }
+.alert-box .btn-watch { display: inline-flex; align-items: center; gap: 6px; }
+.alert-box form { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; max-width: 520px; }
+.alert-box input[type="email"] { flex: 1 1 200px; min-width: 0; font: 16px var(--body); padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+.alert-box form button { font: 700 16px var(--body); padding: 10px 16px; border-radius: 8px; border: 0; background: var(--gold); color: var(--gold-ink); cursor: pointer; }
+.al-weekly { flex-basis: 100%; font-size: 14px; display: flex; gap: 6px; align-items: center; }
+.al-msg { flex-basis: 100%; margin: 0; font-size: 14px; opacity: .85; }
+.al-msg.ok { font-weight: 700; opacity: 1; }
+.has-banner .alert-box { color: inherit; }

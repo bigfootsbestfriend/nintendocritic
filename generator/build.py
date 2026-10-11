@@ -100,6 +100,11 @@ def icon(kind, size=18):
     return f'<svg class="ico" viewBox="0 0 24 24" width="{size}" height="{size}" aria-hidden="true">{ICONS[kind]}</svg>'
 
 
+def icon_bell():
+    return ('<svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z'
+            'M10 20.5a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>')
+
+
 def badge(cart):
     """Cartridge-type pill with its icon. Unknown types show as 'Not announced'."""
     cart = cart if cart in CART_KIND else "Not announced"
@@ -221,10 +226,17 @@ def game_page(g):
              if g["cover"] else f'<small>SWITCH 2</small><b>{e(name)}</b>')
     watch = ""
     if NEWSLETTER_API:
-        ask = (f"Tell me when {name}'s cartridge is confirmed" if cart not in CART_KIND
-               else "Get new releases and Switch 2 fixes")
-        watch = (f'<p class="watch"><button type="button" class="btn-watch" data-signup>{e(ask)}</button> '
-                 f'<span>in our free weekly email</span></p>')
+        ask = {"full": "Email me if this changes", "gkc": "Email me if it gets a full cartridge",
+               "code": "Email me if it gets a cartridge"}.get(CART_KIND.get(cart), "Email me when the cartridge type is confirmed")
+        watch = f'''<div class="alert-box" data-alert='{e(json.dumps({"api": NEWSLETTER_API, "item": g["slug"], "label": name}))}'>
+  <button type="button" class="btn-watch" data-alert-open aria-expanded="false">{icon_bell()} {e(ask)}</button>
+  <form data-alert-form hidden><label for="al-email" class="sr">Email address</label>
+    <input id="al-email" type="email" required placeholder="you@example.com" autocomplete="email">
+    <input class="sr" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit">Set alert</button>
+    <label class="al-weekly"><input type="checkbox" data-weekly> Also send me the free weekly email</label>
+    <p class="al-msg" aria-live="polite">One email when {e(name)}'s cartridge type changes. Nothing else unless you tick the box.</p></form>
+</div>'''
     head = f'''<section aria-labelledby="g-title">
 <div class="game-head{" has-banner" if banner else ""}"{banner_style}>
   <div class="cart{" has-cover" if g["cover"] else ""}"><div class="label">{label}</div><div class="pins" aria-hidden="true"></div></div>
@@ -746,24 +758,29 @@ NEWSLETTER_STATES = {
     "confirmed": "You're subscribed. The next weekly email will land in your inbox.",
     "expired": "That confirmation link has expired. Sign up again below and we'll send a new one.",
     "error": "Something went wrong on our side. Please try again in a few minutes.",
+    "watching": "Your alert is on. We'll email you if anything changes for <label>.",
+    "unwatching": "Turning off your alert…",
+    "unwatched": "Done: you won't get any more alerts for <label>.",
 }
 
 
 def newsletter_page():
-    states = "".join(f'<p class="lede" data-state="{k}" hidden><strong>{e(v)}</strong></p>' for k, v in NEWSLETTER_STATES.items())
+    states = "".join(f'<p class="lede" data-state="{k}" hidden><strong>{e(v).replace("&lt;label&gt;", '<span data-label>that game</span>')}</strong></p>'
+                     for k, v in NEWSLETTER_STATES.items())
     script = f"""<script>
 (() => {{
   const show = s => {{
     document.querySelectorAll("[data-state]").forEach(p => p.hidden = p.dataset.state !== s);
     const form = document.querySelector(".signup");
-    if (form) form.style.display = ["check", "confirming", "confirmed"].includes(s) ? "none" : "";
+    if (form) form.style.display = ["check", "confirming", "confirmed", "unwatching"].includes(s) ? "none" : "";
   }};
-  const t = new URLSearchParams(location.search).get("confirm");
-  if (t) {{
-    show("confirming");
+  const q = new URLSearchParams(location.search), t = q.get("confirm"), u = q.get("unwatch");
+  const label = d => {{ if (d.label) document.querySelectorAll("[data-label]").forEach(x => x.textContent = d.label); return d; }};
+  if (t || u) {{
+    show(t ? "confirming" : "unwatching");
     history.replaceState(null, "", location.pathname);
-    fetch({json.dumps(NEWSLETTER_API + "/confirm")}, {{method: "POST", headers: {{"content-type": "application/json"}}, body: JSON.stringify({{t}})}})
-      .then(r => r.json()).then(d => show(d.state === "invalid" ? "expired" : d.state)).catch(() => show("error"));
+    fetch({json.dumps(NEWSLETTER_API)} + (t ? "/confirm" : "/unwatch"), {{method: "POST", headers: {{"content-type": "application/json"}}, body: JSON.stringify({{t: t || u}})}})
+      .then(r => r.json()).then(label).then(d => show(d.state === "invalid" ? (t ? "expired" : "error") : d.state)).catch(() => show("error"));
   }} else if (location.hash) show(location.hash.slice(1));
 }})();
 </script>"""
@@ -858,6 +875,10 @@ PRIVACY_NEWSLETTER = """<h2>Weekly email</h2>
 <p>If you subscribe, we store your email address with <a href="https://resend.com/legal/privacy-policy">Resend</a>,
 the service that sends the email, and use it only to send the weekly email. We ask you to confirm by clicking a link
 first. Every email has a one-click unsubscribe link, and we never sell or share the list.</p>
+<h2>Game alerts</h2>
+<p>If you ask us to email you when a game's cartridge type changes, we store your email address and that game on our
+own server (Cloudflare) until you turn the alert off with the link in the email. We ask you to confirm first, and we
+only use it to send that alert.</p>
 """
 
 
@@ -917,6 +938,9 @@ def build(out, preview):
     (out / "newsletter.json").write_text(newsletter_json(games))
     (out / "static" / "games.json").write_text(search_index(games))
     (out / "static" / "library.json").write_text(library_json(games, compat))
+    # What each game page says about its box; collector/cart_alerts.py compares the live copy with the new one.
+    (out / "static" / "carts.json").write_text(json.dumps(
+        {g["slug"]: [g["Name"], g.get("Cartridge") or ""] for g in games if g.get("Approved")}, ensure_ascii=False, separators=(",", ":")))
     approved = {f"games/{g['slug']}/index.html" for g in games if g.get("Approved")}
     urls = [rel.removesuffix("index.html") for rel in pages
             if rel != "404.html" and (not rel.startswith("games/") or rel in approved)]

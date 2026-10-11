@@ -187,6 +187,35 @@ document.querySelectorAll("[data-lib]").forEach(async box => {
   draw();
 });
 
+// Cartridge alerts on game pages: one email if the game's box type changes (newsletter Worker /watch, double opt-in).
+document.querySelectorAll("[data-alert]").forEach(box => {
+  const d = JSON.parse(box.dataset.alert);
+  const open = box.querySelector("[data-alert-open]"), form = box.querySelector("[data-alert-form]"), msg = box.querySelector(".al-msg");
+  open.addEventListener("click", () => {
+    form.hidden = !form.hidden; open.setAttribute("aria-expanded", String(!form.hidden));
+    if (!form.hidden) form.querySelector('input[type="email"]').focus();
+  });
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const btn = form.querySelector('button[type="submit"]'); btn.disabled = true;
+    const weekly = form.querySelector("[data-weekly]").checked;
+    try {
+      const r = await fetch(d.api + "/watch", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ site: "nintendocritic", item: d.item, label: d.label, weekly, email: form.querySelector('input[type="email"]').value, website: form.website.value }) });
+      const s = (await r.json()).state;
+      msg.textContent = { check: "Almost done: check your inbox and click the confirm button.", invalid: "That email address doesn't look right.",
+        slow: "You've set a lot of alerts today. Try again tomorrow." }[s] || "Something went wrong. Please try again later.";
+      if (s === "check") {
+        form.querySelectorAll("input, button").forEach(x => x.disabled = true); msg.classList.add("ok");
+        if (weekly) { try { localStorage.setItem("nl-subbed", "1"); } catch (e) {} }
+        if (window.gtag) window.gtag("event", "cart_alert", { game: d.item, weekly });
+        return;
+      }
+    } catch (e) { msg.textContent = "Something went wrong. Please try again later."; }
+    btn.disabled = false;
+  });
+});
+
 // Email signup prompts: "Tell me…" buttons open the signup box, and a small bar offers it once after a while
 // on the page. The bar is easy to close and stays away for 14 days; it never shows to subscribers.
 (() => {
